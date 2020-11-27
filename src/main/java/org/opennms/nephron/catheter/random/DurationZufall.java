@@ -29,10 +29,11 @@
 package org.opennms.nephron.catheter.random;
 
 import java.time.Duration;
+import java.util.Random;
 
 public class DurationZufall extends Zufall<Duration> {
-    public DurationZufall(final Duration min, final Duration max) {
-        super(min, max);
+    public DurationZufall(final Random random, final Duration min, final Duration max) {
+        super(random, min, max);
     }
 
     @Override

@@ -66,11 +66,26 @@ public class FlowReport {
     }
 
     @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FlowReport that = (FlowReport) o;
+        return bytes == that.bytes &&
+                Objects.equals(start, that.start) &&
+                Objects.equals(end, that.end);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(start, end, bytes);
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("start", this.start)
-                          .add("end", this.end)
-                          .add("bytes", this.bytes)
-                          .toString();
+                .add("start", this.start)
+                .add("end", this.end)
+                .add("bytes", this.bytes)
+                .toString();
     }
 }

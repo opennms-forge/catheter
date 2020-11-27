@@ -38,10 +38,14 @@ public class Flow {
     private final Instant start;
     private final Instant end;
 
-    /** Time when flow was last reported **/
+    /**
+     * Time when flow was last reported
+     **/
     private Instant reported;
 
-    /** Bytes transmitted since last report **/
+    /**
+     * Bytes transmitted since last report
+     **/
     private long bytes;
 
     public Flow(final Instant start,
@@ -73,8 +77,8 @@ public class Flow {
         // Create report of current stats
         // Report the real flow end if the flow has ended
         final FlowReport report = new FlowReport(this.reported,
-                                                 this.end.isBefore(now) ? this.end : now,
-                                                 this.bytes);
+                this.end.isBefore(now) ? this.end : now,
+                this.bytes);
 
         // Reset the stats
         this.reported = now;
@@ -88,12 +92,28 @@ public class Flow {
     }
 
     @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Flow flow = (Flow) o;
+        return bytes == flow.bytes &&
+                Objects.equals(start, flow.start) &&
+                Objects.equals(end, flow.end) &&
+                Objects.equals(reported, flow.reported);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(start, end, reported, bytes);
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("start", this.start)
-                          .add("end", this.end)
-                          .add("lastReported", this.reported)
-                          .add("bytes", this.bytes)
-                          .toString();
+                .add("start", this.start)
+                .add("end", this.end)
+                .add("lastReported", this.reported)
+                .add("bytes", this.bytes)
+                .toString();
     }
 }

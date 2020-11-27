@@ -29,10 +29,11 @@
 package org.opennms.nephron.catheter.random;
 
 import java.time.Instant;
+import java.util.Random;
 
 public class InstantZufall extends Zufall<Instant> {
-    public InstantZufall(final Instant min, final Instant max) {
-        super(min, max);
+    public InstantZufall(final Random random, final Instant min, final Instant max) {
+        super(random, min, max);
     }
 
     @Override

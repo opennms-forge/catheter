@@ -26,50 +26,47 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.nephron.catheter.random;
+package org.opennms.nephron.catheter;
 
-import java.util.Objects;
-import java.util.Random;
+import java.io.File;
+import java.io.IOException;
 
-public abstract class Zufall<T> {
-    private final long start;
-    private final long range;
-    private final Random random;
+import javax.xml.bind.JAXBException;
 
-    public Zufall(final Random random, final T min, final T max) {
-        this.start = this.toLong(min);
-        this.range = this.toLong(max) - this.start;
-        this.random = random;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+
+
+public class Catheter {
+
+    @Argument
+    private File jsonConfigFile;
+
+    public static void main(final String... args) throws IOException, JAXBException {
+        new Catheter().run(args);
     }
 
-    public T random() {
-        final long l = this.start + Math.abs(random.nextLong()) % (this.range);
-        return this.fromLong(l);
-    }
+    private void run(final String... args) throws IOException, JAXBException {
+        final CmdLineParser parser = new CmdLineParser(this);
 
-    protected abstract long toLong(final T t);
+        try {
+            parser.parseArgument(args);
 
-    protected abstract T fromLong(final long l);
+            if (jsonConfigFile == null) {
+                throw new CmdLineException(parser, "No argument is given");
+            }
+        } catch (CmdLineException e) {
+            System.err.println(e.getMessage());
+            System.err.println("java -jar catheter-1.0-SNAPSHOT-jar-with-dependencies.jar JSON-file");
+            parser.printUsage(System.err);
+            System.err.println();
 
-    @Override
-    public boolean equals(final Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Zufall<?> zufall = (Zufall<?>) o;
-        return start == zufall.start &&
-                range == zufall.range;
-    }
+            return;
+        }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(start, range);
-    }
+        final Simulation simulation = Simulation.fromFile(jsonConfigFile);
 
-    @Override
-    public String toString() {
-        return "Zufall{" +
-                "start=" + start +
-                ", range=" + range +
-                '}';
+        simulation.start();
     }
 }

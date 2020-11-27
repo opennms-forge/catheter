@@ -44,8 +44,6 @@ import com.google.common.collect.Lists;
 
 public class FlowGenerator {
 
-    private final static Random RANDOM = new Random();
-
     private final long bytesPerSecond;
 
     private final Zufall<Duration> flowDuration;
@@ -57,27 +55,29 @@ public class FlowGenerator {
     private final List<Flow> ongoingFlows = Lists.newArrayList();
 
     private Instant lastTick;
+    private Random random;
 
-    private FlowGenerator(final Builder builder, final Instant now) {
+    private FlowGenerator(final Builder builder, final Instant now, final Random random) {
         this.bytesPerSecond = builder.bytesPerSecond;
 
-        this.flowDuration = new DurationZufall(builder.minFlowDuration, builder.maxFlowDuration);
+        this.flowDuration = new DurationZufall(random, builder.minFlowDuration, builder.maxFlowDuration);
 
         this.maxFlowCount = builder.maxFlowCount;
         this.activeTimeout = builder.activeTimeout;
 
         this.lastTick = now;
+        this.random = random;
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 
     public Collection<FlowReport> tick(final Instant now) {
-        if (this.lastTick == null) {
-            this.lastTick = now;
-        }
-
         // Create new flows if limit is not reached
-        if (this.ongoingFlows.isEmpty() || (this.ongoingFlows.size() < this.maxFlowCount && RANDOM.nextBoolean())) {
+        if (this.ongoingFlows.isEmpty() || (this.ongoingFlows.size() < this.maxFlowCount && random.nextBoolean())) {
             // Flow started somewhere between last tick and this one
-            final Instant start = new InstantZufall(this.lastTick, now).random();
+            final Instant start = new InstantZufall(random, this.lastTick, now).random();
 
             // Add the flow to the list of ongoing flows so it will get its share later on
             this.ongoingFlows.add(new Flow(start, now.plus(this.flowDuration.random())));
@@ -130,14 +130,42 @@ public class FlowGenerator {
         long remaining = overall;
 
         final long[] shares = new long[count];
-        for (int i = 0; i < count-1; i++) {
-            shares[i] = (long) (RANDOM.nextDouble() * remaining);
+        for (int i = 0; i < count - 1; i++) {
+            shares[i] = (long) (random.nextDouble() * remaining);
             remaining -= shares[i];
         }
 
-        shares[count-1] = remaining;
+        shares[count - 1] = remaining;
 
         return shares;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FlowGenerator that = (FlowGenerator) o;
+        return bytesPerSecond == that.bytesPerSecond &&
+                maxFlowCount == that.maxFlowCount &&
+                Objects.equals(flowDuration, that.flowDuration) &&
+                Objects.equals(activeTimeout, that.activeTimeout) &&
+                Objects.equals(lastTick, that.lastTick);
+    }
+
+    @Override
+    public String toString() {
+        return "FlowGenerator{" +
+                "bytesPerSecond=" + bytesPerSecond +
+                ", flowDuration=" + flowDuration +
+                ", maxFlowCount=" + maxFlowCount +
+                ", activeTimeout=" + activeTimeout +
+                ", lastTick=" + lastTick +
+                '}';
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(bytesPerSecond, flowDuration, maxFlowCount, activeTimeout, ongoingFlows, lastTick, random);
     }
 
     public static class Builder {
@@ -178,12 +206,8 @@ public class FlowGenerator {
             return this;
         }
 
-        public FlowGenerator build(final Instant now) {
-            return new FlowGenerator(this, now);
+        public FlowGenerator build(final Instant now, final Random random) {
+            return new FlowGenerator(this, now, random);
         }
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 }

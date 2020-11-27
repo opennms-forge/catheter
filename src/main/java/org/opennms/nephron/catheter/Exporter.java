@@ -30,6 +30,7 @@ package org.opennms.nephron.catheter;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
@@ -48,12 +49,10 @@ import com.google.common.net.InetAddresses;
 import com.google.protobuf.UInt64Value;
 
 public class Exporter {
-    private final static Random RANDOM = new Random();
-
-    public final static List<Integer> PROTOCOLS = Arrays.asList(6, 17);
-    public final static List<String> APPLICATIONS = generate(200, generateString(15));
-    public final static List<String> HOSTS = generate(5, generateString(10));
-    public final static List<AddrHost> ADDRESSES = generate(100, () -> new AddrHost(generateInetAddr().get(), generateString(10).get()));
+    private final List<Integer> protocols;
+    private final List<String> applications;
+    private final List<String> hosts;
+    private final List<AddrHost> addresses;
 
     private final int nodeId;
 
@@ -63,41 +62,55 @@ public class Exporter {
     private final String location;
 
     private final FlowGenerator generator;
+    private final Duration clockOffset;
+    private final Random random;
 
     private Exporter(final Builder builder,
-                     final Instant now) {
+                     final Instant now,
+                     final Random random) {
         this.nodeId = builder.nodeId;
         this.foreignSource = builder.foreignSource;
         this.foreignId = builder.foreignId;
         this.location = builder.location;
+        this.clockOffset = builder.clockOffset;
 
-        this.generator = builder.generator.build(now);
+        this.random = random;
+        this.generator = builder.generator.build(now, random);
+
+        this.protocols = Arrays.asList(6, 17);
+        this.applications = generate(200, generateString(15));
+        this.hosts = generate(5, generateString(10));
+        this.addresses = generate(100, () -> new AddrHost(generateInetAddr().get(), generateString(10).get()));
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 
     public Collection<FlowDocument> tick(final Instant now) {
-        return this.generator.tick(now).stream().map(this::createFlowDocument).collect(Collectors.toList());
+        return this.generator.tick(now.plus(this.clockOffset)).stream().map(this::createFlowDocument).collect(Collectors.toList());
     }
 
     public Collection<FlowDocument> shutdown(final Instant now) {
-        return this.generator.shutdown(now).stream().map(this::createFlowDocument).collect(Collectors.toList());
+        return this.generator.shutdown(now.plus(this.clockOffset)).stream().map(this::createFlowDocument).collect(Collectors.toList());
     }
 
     private FlowDocument createFlowDocument(final FlowReport report) {
-        final int protocol = choose(PROTOCOLS);
-        final String application = choose(APPLICATIONS);
+        final int protocol = choose(protocols);
+        final String application = choose(applications);
 
-        final AddrHost srcAddr = choose(ADDRESSES);
-        final AddrHost dstAddr = choose(ADDRESSES);
+        final AddrHost srcAddr = choose(addresses);
+        final AddrHost dstAddr = choose(addresses);
 
         final InetAddress[] convo = InetAddresses.coerceToInteger(srcAddr.address) < InetAddresses.coerceToInteger(dstAddr.address)
-                                    ? new InetAddress[]{srcAddr.address, dstAddr.address}
-                                    : new InetAddress[]{dstAddr.address, srcAddr.address};
+                ? new InetAddress[]{srcAddr.address, dstAddr.address}
+                : new InetAddress[]{dstAddr.address, srcAddr.address};
 
         final String convoKey = "[\"" + this.location + "\",\"" + protocol + ",\"" + InetAddresses.toAddrString(convo[0]) + "\",\"" + InetAddresses.toAddrString(convo[1]) + "\",\"" + application + "\"]";
 
         final FlowDocument.Builder flow = FlowDocument.newBuilder();
         flow.setApplication(application);
-        flow.setHost(choose(HOSTS));
+        flow.setHost(choose(hosts));
         flow.setLocation(this.location);
         flow.setDstLocality(Locality.PUBLIC);
         flow.setSrcLocality(Locality.PUBLIC);
@@ -121,6 +134,57 @@ public class Exporter {
         return flow.build();
     }
 
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Exporter exporter = (Exporter) o;
+        return nodeId == exporter.nodeId &&
+                Objects.equals(foreignSource, exporter.foreignSource) &&
+                Objects.equals(foreignId, exporter.foreignId) &&
+                Objects.equals(location, exporter.location) &&
+                Objects.equals(generator, exporter.generator) &&
+                Objects.equals(clockOffset, exporter.clockOffset);
+    }
+
+    @Override
+    public String toString() {
+        return "Exporter{" +
+                "nodeId=" + nodeId +
+                ", foreignSource='" + foreignSource + '\'' +
+                ", foreignId='" + foreignId + '\'' +
+                ", location='" + location + '\'' +
+                ", generator=" + generator +
+                ", clockOffset=" + clockOffset +
+                '}';
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(protocols, applications, hosts, addresses, nodeId, foreignSource, foreignId, location, generator, clockOffset, random);
+    }
+
+    private Supplier<String> generateString(final int length) {
+        return () -> random.ints(97, 123)
+                .limit(length)
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString();
+    }
+
+    private <T> List<T> generate(final int count, final Supplier<T> f) {
+        return IntStream.range(0, count)
+                .mapToObj(i -> f.get())
+                .collect(Collectors.toList());
+    }
+
+    private Supplier<Inet4Address> generateInetAddr() {
+        return () -> InetAddresses.fromInteger(random.nextInt());
+    }
+
+    private <T> T choose(final List<T> options) {
+        return options.get(random.nextInt(options.size()));
+    }
+
     public static class Builder {
         private int nodeId = 0;
 
@@ -128,6 +192,7 @@ public class Exporter {
         private String foreignSource = "";
 
         private String location = "Default";
+        private Duration clockOffset = Duration.ZERO;
 
         private FlowGenerator.Builder generator;
 
@@ -156,13 +221,14 @@ public class Exporter {
             return this;
         }
 
-        public Exporter build(final Instant now) {
-            return new Exporter(this, now);
+        public Builder withClockOffset(final Duration clockOffset) {
+            this.clockOffset = Objects.requireNonNull(clockOffset);
+            return this;
         }
-    }
 
-    public static Builder builder() {
-        return new Builder();
+        public Exporter build(final Instant now, final Random random) {
+            return new Exporter(this, now.plus(this.clockOffset), random);
+        }
     }
 
     private static class AddrHost {
@@ -173,26 +239,5 @@ public class Exporter {
             this.address = Objects.requireNonNull(address);
             this.hostname = Objects.requireNonNull(hostname);
         }
-    }
-
-    private static Supplier<String> generateString(final int length) {
-        return () -> RANDOM.ints(97, 123)
-                           .limit(length)
-                           .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
-                           .toString();
-    }
-
-    private static <T> List<T> generate(final int count, final Supplier<T> f) {
-        return IntStream.range(0, count)
-                        .mapToObj(i -> f.get())
-                        .collect(Collectors.toList());
-    }
-
-    private static Supplier<Inet4Address> generateInetAddr() {
-        return () -> InetAddresses.fromInteger(RANDOM.nextInt());
-    }
-
-    private static <T> T choose(final List<T> options) {
-        return options.get(RANDOM.nextInt(options.size()));
     }
 }

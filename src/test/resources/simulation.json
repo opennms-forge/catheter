@@ -1,0 +1,39 @@
+{
+  "simulation" : {
+    "bootStrapServers" : "bootstrapServers",
+    "exporters" : {
+      "exporters" : [ {
+        "clockOffset" : 10000,
+        "flowGenerator" : {
+          "activeTimeout" : 1000,
+          "bytesPerSecond" : 1000000,
+          "maxFlowCount" : 10,
+          "maxFlowDuration" : 20000,
+          "minFlowDuration" : 1000
+        },
+        "foreignId" : "foreignId1",
+        "foreignSource" : "foreignSource1",
+        "location" : "Default",
+        "nodeId" : 1
+      }, {
+        "clockOffset" : -10000,
+        "flowGenerator" : {
+          "activeTimeout" : 1000,
+          "bytesPerSecond" : 1000000,
+          "maxFlowCount" : 10,
+          "maxFlowDuration" : 15000,
+          "minFlowDuration" : 2000
+        },
+        "foreignId" : "foreignId2",
+        "foreignSource" : "foreignSource2",
+        "location" : "Minion",
+        "nodeId" : 2
+      } ]
+    },
+    "flowTopic" : "flowTopic",
+    "realtime" : true,
+    "seed" : 1606468591122,
+    "startTime" : "2020-11-27T09:16:31.122Z",
+    "tickMs" : 250
+  }
+}

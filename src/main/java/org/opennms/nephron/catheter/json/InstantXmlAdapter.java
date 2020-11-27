@@ -26,50 +26,21 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.nephron.catheter.random;
+package org.opennms.nephron.catheter.json;
 
-import java.util.Objects;
-import java.util.Random;
+import java.time.Instant;
 
-public abstract class Zufall<T> {
-    private final long start;
-    private final long range;
-    private final Random random;
+import javax.xml.bind.annotation.adapters.XmlAdapter;
 
-    public Zufall(final Random random, final T min, final T max) {
-        this.start = this.toLong(min);
-        this.range = this.toLong(max) - this.start;
-        this.random = random;
-    }
-
-    public T random() {
-        final long l = this.start + Math.abs(random.nextLong()) % (this.range);
-        return this.fromLong(l);
-    }
-
-    protected abstract long toLong(final T t);
-
-    protected abstract T fromLong(final long l);
+public class InstantXmlAdapter extends XmlAdapter<String, Instant> {
 
     @Override
-    public boolean equals(final Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Zufall<?> zufall = (Zufall<?>) o;
-        return start == zufall.start &&
-                range == zufall.range;
+    public String marshal(final Instant instant) {
+        return instant.toString();
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(start, range);
-    }
-
-    @Override
-    public String toString() {
-        return "Zufall{" +
-                "start=" + start +
-                ", range=" + range +
-                '}';
+    public Instant unmarshal(final String string) {
+        return Instant.parse(string);
     }
 }

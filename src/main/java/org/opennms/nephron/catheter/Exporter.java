@@ -194,7 +194,7 @@ public class Exporter {
         private String location = "Default";
         private Duration clockOffset = Duration.ZERO;
 
-        private FlowGenerator.Builder generator;
+        private FlowGenerator.Builder generator = FlowGenerator.builder();
 
         public Builder withNodeId(final int nodeId) {
             this.nodeId = nodeId;
@@ -223,6 +223,31 @@ public class Exporter {
 
         public Builder withClockOffset(final Duration clockOffset) {
             this.clockOffset = Objects.requireNonNull(clockOffset);
+            return this;
+        }
+
+        public Builder withBytesPerSecond(final long bytesPerSecond) {
+            this.generator.withBytesPerSecond(bytesPerSecond);
+            return this;
+        }
+
+        public Builder withMinFlowDuration(final Duration minFlowDuration) {
+            this.generator.withMinFlowDuration(minFlowDuration);
+            return this;
+        }
+
+        public Builder withMaxFlowDuration(final Duration maxFlowDuration) {
+            this.generator.withMaxFlowDuration(maxFlowDuration);
+            return this;
+        }
+
+        public Builder withMaxFlowCount(final int maxFlowCount) {
+            this.generator.withMaxFlowCount(maxFlowCount);
+            return this;
+        }
+
+        public Builder withActiveTimeout(final Duration activeTimeout) {
+            this.generator.withActiveTimeout(activeTimeout);
             return this;
         }
 

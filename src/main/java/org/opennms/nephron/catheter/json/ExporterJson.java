@@ -39,7 +39,7 @@ public class ExporterJson {
     private String foreignSource = "";
     private String foreignId = "";
     private String location = "";
-    private long clockOffset = 0;
+    private long clockOffsetMs = 0;
     private FlowGeneratorJson flowGenerator;
 
     public ExporterJson() {
@@ -81,13 +81,13 @@ public class ExporterJson {
         this.location = location;
     }
 
-    @XmlElement(name = "clockOffset")
-    public long getClockOffset() {
-        return clockOffset;
+    @XmlElement(name = "clockOffsetMs")
+    public long getClockOffsetMs() {
+        return clockOffsetMs;
     }
 
-    public void setClockOffset(final long clockOffset) {
-        this.clockOffset = clockOffset;
+    public void setClockOffsetMs(final long clockOffsetMs) {
+        this.clockOffsetMs = clockOffsetMs;
     }
 
     @XmlElement(name = "flowGenerator")
@@ -105,7 +105,7 @@ public class ExporterJson {
         if (o == null || getClass() != o.getClass()) return false;
         ExporterJson that = (ExporterJson) o;
         return nodeId == that.nodeId &&
-                clockOffset == that.clockOffset &&
+                clockOffsetMs == that.clockOffsetMs &&
                 Objects.equals(foreignSource, that.foreignSource) &&
                 Objects.equals(foreignId, that.foreignId) &&
                 Objects.equals(location, that.location) &&
@@ -114,7 +114,7 @@ public class ExporterJson {
 
     @Override
     public int hashCode() {
-        return Objects.hash(nodeId, foreignSource, foreignId, location, clockOffset, flowGenerator);
+        return Objects.hash(nodeId, foreignSource, foreignId, location, clockOffsetMs, flowGenerator);
     }
 
     @Override
@@ -124,7 +124,7 @@ public class ExporterJson {
                 ", foreignSource='" + foreignSource + '\'' +
                 ", foreignId='" + foreignId + '\'' +
                 ", location='" + location + '\'' +
-                ", clockOffset=" + clockOffset +
+                ", clockOffsetMs=" + clockOffsetMs +
                 ", flowGenerator=" + flowGenerator +
                 '}';
     }

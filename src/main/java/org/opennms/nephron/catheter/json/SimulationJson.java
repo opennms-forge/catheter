@@ -32,9 +32,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
@@ -52,7 +52,7 @@ public class SimulationJson {
 
     private List<ExporterJson> exporters = new ArrayList<>();
 
-    private long seed = System.currentTimeMillis();
+    private long seed = new Random().nextLong();
 
     public SimulationJson() {
     }
@@ -103,7 +103,6 @@ public class SimulationJson {
         this.startTime = startTime;
     }
 
-    @XmlElementWrapper(name = "exporters")
     public List<ExporterJson> getExporters() {
         return exporters;
     }

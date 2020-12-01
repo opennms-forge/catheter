@@ -93,17 +93,17 @@ public class CatheterIT {
         simulationJson.setStartTime(Instant.now());
 
         final FlowGeneratorJson flowGeneratorJson1 = new FlowGeneratorJson();
-        flowGeneratorJson1.setActiveTimeout(1000);
+        flowGeneratorJson1.setActiveTimeoutMs(1000);
         flowGeneratorJson1.setBytesPerSecond(1000_000);
         flowGeneratorJson1.setMaxFlowCount(10);
-        flowGeneratorJson1.setMinFlowDuration(1000);
-        flowGeneratorJson1.setMaxFlowDuration(20000);
+        flowGeneratorJson1.setMinFlowDurationMs(1000);
+        flowGeneratorJson1.setMaxFlowDurationMs(20000);
 
         final ExporterJson exporterJson1 = new ExporterJson();
         exporterJson1.setForeignSource("foreignSource1");
         exporterJson1.setForeignId("foreignId1");
         exporterJson1.setNodeId(1);
-        exporterJson1.setClockOffset(10);
+        exporterJson1.setClockOffsetMs(10);
         exporterJson1.setFlowGenerator(flowGeneratorJson1);
         exporterJson1.setLocation("Default");
 

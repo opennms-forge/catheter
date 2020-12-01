@@ -87,7 +87,7 @@ public class Simulation {
         this.tickMs = Objects.requireNonNull(builder.tickMs);
         this.realtime = builder.realtime;
         this.startTime = builder.startTime != null ? builder.startTime : Instant.now();
-        random.setSeed(builder.seed);
+        this.random.setSeed(builder.seed);
         this.exporters = builder.exporters.stream().map(e -> e.build(this.startTime, random)).collect(Collectors.toList());
     }
 
@@ -110,9 +110,9 @@ public class Simulation {
         for(final ExporterJson exporterJson : simulationJson.getExporters()) {
             final FlowGenerator.Builder flowGeneratorBuilder = FlowGenerator.builder()
                     .withMaxFlowCount(exporterJson.getFlowGenerator().getMaxFlowCount())
-                    .withMinFlowDuration(Duration.ofMillis(exporterJson.getFlowGenerator().getMinFlowDuration()))
-                    .withMaxFlowDuration(Duration.ofMillis(exporterJson.getFlowGenerator().getMaxFlowDuration()))
-                    .withActiveTimeout(Duration.ofMillis(exporterJson.getFlowGenerator().getActiveTimeout()))
+                    .withMinFlowDuration(Duration.ofMillis(exporterJson.getFlowGenerator().getMinFlowDurationMs()))
+                    .withMaxFlowDuration(Duration.ofMillis(exporterJson.getFlowGenerator().getMaxFlowDurationMs()))
+                    .withActiveTimeout(Duration.ofMillis(exporterJson.getFlowGenerator().getActiveTimeoutMs()))
                     .withBytesPerSecond(exporterJson.getFlowGenerator().getBytesPerSecond());
 
             exporterBuilders.add(Exporter.builder()
@@ -121,7 +121,7 @@ public class Simulation {
                                     .withNodeId(exporterJson.getNodeId())
                                     .withLocation(exporterJson.getLocation())
                                     .withGenerator(flowGeneratorBuilder)
-                                    .withClockOffset(Duration.ofMillis(exporterJson.getClockOffset())));
+                                    .withClockOffset(Duration.ofMillis(exporterJson.getClockOffsetMs())));
         }
 
         return Simulation.builder()

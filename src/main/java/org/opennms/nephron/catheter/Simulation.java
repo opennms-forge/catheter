@@ -120,6 +120,8 @@ public class Simulation {
                                     .withForeignSource(exporterJson.getForeignSource())
                                     .withNodeId(exporterJson.getNodeId())
                                     .withLocation(exporterJson.getLocation())
+                                    .withInputSnmp(exporterJson.getInputSnmp())
+                                    .withOutputSnmp(exporterJson.getOutputSnmp())
                                     .withGenerator(flowGeneratorBuilder)
                                     .withClockOffset(Duration.ofMillis(exporterJson.getClockOffsetMs())));
         }

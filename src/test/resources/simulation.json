@@ -3,6 +3,8 @@
     "bootStrapServers": "bootstrapServers",
     "exporters": [
       {
+        "inputSnmp": 98,
+        "outputSnmp": 99,
         "clockOffsetMs": 10000,
         "flowGenerator": {
           "activeTimeoutMs": 1000,
@@ -17,6 +19,8 @@
         "nodeId": 1
       },
       {
+        "inputSnmp": 11,
+        "outputSnmp": 12,
         "clockOffsetMs": -10000,
         "flowGenerator": {
           "activeTimeoutMs": 1000,

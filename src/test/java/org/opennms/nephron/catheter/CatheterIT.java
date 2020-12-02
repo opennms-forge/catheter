@@ -72,6 +72,7 @@ import org.testcontainers.containers.KafkaContainer;
 
 import com.google.common.collect.ImmutableMap;
 import static org.awaitility.Awaitility.*;
+import static org.junit.Assert.assertTrue;
 
 public class CatheterIT {
     private static final Logger LOG = LoggerFactory.getLogger(CatheterIT.class);
@@ -130,6 +131,146 @@ public class CatheterIT {
     }
 
     @Test
+    public void testTimestampsNonRealtime() throws Exception {
+        final Instant now = Instant.ofEpochMilli(1_500_000_000_000L);
+
+        final Simulation simulation = Simulation.builder()
+                .withBootstrapServers(kafka.getBootstrapServers())
+                .withFlowTopic(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC)
+                .withRealtime(false)
+                .withStartTime(now)
+                .withTickMs(Duration.ofMillis(50))
+                .withExporters(
+                        Exporter.builder()
+                                .withNodeId(1)
+                                .withForeignSource("exporters")
+                                .withForeignId("test1")
+                                .withInputSnmp(98)
+                                .withOutputSnmp(99)
+                                .withGenerator(FlowGenerator.builder()
+                                        .withBytesPerSecond(750_000L)
+                                        .withMaxFlowCount(10)
+                                        .withActiveTimeout(Duration.ofSeconds(2))
+                                        .withMinFlowDuration(Duration.ofSeconds(1))
+                                        .withMaxFlowDuration(Duration.ofSeconds(20)))
+                ).build();
+
+        final KafkaConsumer<String, FlowDocument> kafkaConsumer = createConsumer();
+
+        // run first simulation with seed
+        simulation.start(20);
+        simulation.join();
+
+        final AtomicLong received = new AtomicLong();
+        final List<FlowDocument> flows = new ArrayList<>();
+
+        // wait till all data arrived
+        await().pollDelay(Duration.ofSeconds(1)).atMost(Duration.ofMinutes(1)).until(() -> {
+            final ConsumerRecords<String, FlowDocument> records = kafkaConsumer.poll(1000);
+            received.addAndGet(records.count());
+
+            for(final ConsumerRecord<String, FlowDocument> record : records) {
+                flows.add(record.value());
+            }
+
+            return received.get() >= simulation.getFlowsSent();
+        });
+
+        final Instant future = now.plus(simulation.getElapsedTime()).plus(Duration.ofMillis(1));
+
+        LOG.debug("Now: " + now + " Future: " + future);
+
+        for(final FlowDocument flowDocument : flows) {
+            final Instant first = Instant.ofEpochMilli(flowDocument.getFirstSwitched().getValue());
+            final Instant last = Instant.ofEpochMilli(flowDocument.getLastSwitched().getValue());
+            final Instant delta = Instant.ofEpochMilli(flowDocument.getDeltaSwitched().getValue());
+
+            LOG.debug("First: " + first + " Last: "+last);
+
+            assertTrue(first.equals(delta));
+            assertTrue(first.isBefore(last));
+            assertTrue(first.isAfter(now));
+            assertTrue(last.isAfter(now));
+            assertTrue(last.isBefore(future));
+        }
+
+        // close the consumer
+        kafkaConsumer.close();
+    }
+
+    @Test
+    public void testTimestampsRealtime() throws Exception {
+        final Instant now = Instant.now();
+
+        final Simulation simulation = Simulation.builder()
+                .withBootstrapServers(kafka.getBootstrapServers())
+                .withFlowTopic(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC)
+                .withRealtime(true)
+                .withStartTime(now)
+                .withTickMs(Duration.ofMillis(50))
+                .withExporters(
+                        Exporter.builder()
+                                .withNodeId(1)
+                                .withForeignSource("exporters")
+                                .withForeignId("test1")
+                                .withInputSnmp(98)
+                                .withOutputSnmp(99)
+                                .withGenerator(FlowGenerator.builder()
+                                        .withBytesPerSecond(750_000L)
+                                        .withMaxFlowCount(10)
+                                        .withActiveTimeout(Duration.ofSeconds(2))
+                                        .withMinFlowDuration(Duration.ofSeconds(1))
+                                        .withMaxFlowDuration(Duration.ofSeconds(20)))
+                ).build();
+
+        final KafkaConsumer<String, FlowDocument> kafkaConsumer = createConsumer();
+
+        // run first simulation with seed
+        simulation.start();
+
+        Thread.sleep(5000);
+
+        simulation.stop();
+        simulation.join();
+
+        final AtomicLong received = new AtomicLong();
+        final List<FlowDocument> flows = new ArrayList<>();
+
+        // wait till all data arrived
+        await().pollDelay(Duration.ofSeconds(1)).atMost(Duration.ofMinutes(1)).until(() -> {
+            final ConsumerRecords<String, FlowDocument> records = kafkaConsumer.poll(1000);
+            received.addAndGet(records.count());
+
+            for(final ConsumerRecord<String, FlowDocument> record : records) {
+                flows.add(record.value());
+            }
+
+            return received.get() >= simulation.getFlowsSent();
+        });
+
+        final Instant future = Instant.now();
+
+        LOG.debug("Now: " + now + " Future: " + future);
+
+        for(final FlowDocument flowDocument : flows) {
+            final Instant first = Instant.ofEpochMilli(flowDocument.getFirstSwitched().getValue());
+            final Instant last = Instant.ofEpochMilli(flowDocument.getLastSwitched().getValue());
+            final Instant delta = Instant.ofEpochMilli(flowDocument.getDeltaSwitched().getValue());
+
+            LOG.debug("First: " + first + " Last: "+last);
+
+            assertTrue(first.equals(delta));
+            assertTrue(first.isBefore(last));
+            assertTrue(first.isAfter(now));
+            assertTrue(last.isAfter(now));
+            assertTrue(last.isBefore(future));
+        }
+
+        // close the consumer
+        kafkaConsumer.close();
+    }
+
+    @Test
     public void testJsonHandling() throws Exception {
         final Simulation expected = Simulation.builder()
                 .withBootstrapServers("bootstrapServers")
@@ -139,6 +280,8 @@ public class CatheterIT {
                 .withTickMs(Duration.ofMillis(250))
                 .withExporters(
                         Exporter.builder()
+                                .withInputSnmp(98)
+                                .withOutputSnmp(99)
                                 .withNodeId(1)
                                 .withForeignSource("foreignSource1")
                                 .withForeignId("foreignId1")
@@ -151,6 +294,8 @@ public class CatheterIT {
                                         .withMinFlowDuration(Duration.ofSeconds(1))
                                         .withMaxFlowDuration(Duration.ofSeconds(20))),
                         Exporter.builder()
+                                .withInputSnmp(11)
+                                .withOutputSnmp(12)
                                 .withNodeId(2)
                                 .withForeignSource("foreignSource2")
                                 .withForeignId("foreignId2")
@@ -168,6 +313,62 @@ public class CatheterIT {
 
         // check whether loaded file and expected simulation instance is equal
         assertThat(Simulation.fromFile(new File("src/test/resources/simulation.json")), is(expected));
+    }
+
+    @Test
+    public void testInputAndOutput() throws Exception {
+        final Instant now = Instant.ofEpochMilli(1_500_000_000_000L);
+
+        final Simulation simulation = Simulation.builder()
+                .withBootstrapServers(kafka.getBootstrapServers())
+                .withFlowTopic(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC)
+                .withRealtime(false)
+                .withStartTime(now)
+                .withTickMs(Duration.ofMillis(50))
+                .withExporters(
+                        Exporter.builder()
+                                .withNodeId(1)
+                                .withForeignSource("exporters")
+                                .withForeignId("test1")
+                                .withInputSnmp(98)
+                                .withOutputSnmp(99)
+                                .withClockOffset(Duration.ofSeconds(-10))
+                                .withGenerator(FlowGenerator.builder()
+                                        .withBytesPerSecond(750_000L)
+                                        .withMaxFlowCount(10)
+                                        .withActiveTimeout(Duration.ofSeconds(2))
+                                        .withMinFlowDuration(Duration.ofSeconds(1))
+                                        .withMaxFlowDuration(Duration.ofSeconds(20)))
+                ).build();
+
+        final KafkaConsumer<String, FlowDocument> kafkaConsumer = createConsumer();
+
+        // run simulation
+        simulation.start(20);
+        simulation.join();
+
+        final AtomicLong received = new AtomicLong();
+        final List<FlowDocument> flows = new ArrayList<>();
+
+        // wait till all data arrived
+        await().pollDelay(Duration.ofSeconds(1)).atMost(Duration.ofMinutes(1)).until(() -> {
+            final ConsumerRecords<String, FlowDocument> records = kafkaConsumer.poll(1000);
+            received.addAndGet(records.count());
+
+            for(final ConsumerRecord<String, FlowDocument> record : records) {
+                flows.add(record.value());
+            }
+
+            return received.get() >= simulation.getFlowsSent();
+        });
+
+        for(FlowDocument flowDocument : flows) {
+            assertThat(flowDocument.getInputSnmpIfindex().getValue(), is(98));
+            assertThat(flowDocument.getOutputSnmpIfindex().getValue(), is(99));
+        }
+
+        // close the consumer
+        kafkaConsumer.close();
     }
 
     @Test

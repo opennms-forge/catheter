@@ -41,6 +41,8 @@ public class ExporterJson {
     private String location = "";
     private long clockOffsetMs = 0;
     private FlowGeneratorJson flowGenerator;
+    private int inputSnmp = 0;
+    private int outputSnmp = 0;
 
     public ExporterJson() {
     }
@@ -99,6 +101,24 @@ public class ExporterJson {
         this.flowGenerator = flowGenerator;
     }
 
+    @XmlElement(name = "inputSnmp")
+    public int getInputSnmp() {
+        return inputSnmp;
+    }
+
+    public void setInputSnmp(int inputSnmp) {
+        this.inputSnmp = inputSnmp;
+    }
+
+    @XmlElement(name = "outputSnmp")
+    public int getOutputSnmp() {
+        return outputSnmp;
+    }
+
+    public void setOutputSnmp(int outputSnmp) {
+        this.outputSnmp = outputSnmp;
+    }
+
     @Override
     public boolean equals(final Object o) {
         if (this == o) return true;
@@ -109,6 +129,8 @@ public class ExporterJson {
                 Objects.equals(foreignSource, that.foreignSource) &&
                 Objects.equals(foreignId, that.foreignId) &&
                 Objects.equals(location, that.location) &&
+                Objects.equals(inputSnmp, that.inputSnmp) &&
+                Objects.equals(outputSnmp, that.outputSnmp) &&
                 Objects.equals(flowGenerator, that.flowGenerator);
     }
 
@@ -126,6 +148,8 @@ public class ExporterJson {
                 ", location='" + location + '\'' +
                 ", clockOffsetMs=" + clockOffsetMs +
                 ", flowGenerator=" + flowGenerator +
+                ", inputSnmp=" + inputSnmp +
+                ", outputSnmp=" + outputSnmp +
                 '}';
     }
 }

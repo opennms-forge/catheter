@@ -46,6 +46,7 @@ import org.opennms.netmgt.flows.persistence.model.Locality;
 import org.opennms.netmgt.flows.persistence.model.NodeInfo;
 
 import com.google.common.net.InetAddresses;
+import com.google.protobuf.UInt32Value;
 import com.google.protobuf.UInt64Value;
 
 public class Exporter {
@@ -64,6 +65,8 @@ public class Exporter {
     private final FlowGenerator generator;
     private final Duration clockOffset;
     private final Random random;
+    private final int inputSnmp;
+    private final int outputSnmp;
 
     private Exporter(final Builder builder,
                      final Instant now,
@@ -81,6 +84,8 @@ public class Exporter {
         this.applications = generate(200, generateString(15));
         this.hosts = generate(5, generateString(10));
         this.addresses = generate(100, () -> new AddrHost(generateInetAddr().get(), generateString(10).get()));
+        this.inputSnmp = builder.inputSnmp;
+        this.outputSnmp = builder.outputSnmp;
     }
 
     public static Builder builder() {
@@ -121,9 +126,11 @@ public class Exporter {
         flow.setDstHostname(dstAddr.hostname);
         flow.setFirstSwitched(UInt64Value.of(report.getStart().toEpochMilli()));
         flow.setDeltaSwitched(UInt64Value.of(report.getStart().toEpochMilli()));
-        flow.setLastSwitched(UInt64Value.of(report.getStart().toEpochMilli()));
+        flow.setLastSwitched(UInt64Value.of(report.getEnd().toEpochMilli()));
         flow.setNumBytes(UInt64Value.of(report.getBytes()));
         flow.setConvoKey(convoKey);
+        flow.setInputSnmpIfindex(UInt32Value.of(this.inputSnmp));
+        flow.setOutputSnmpIfindex(UInt32Value.of(this.outputSnmp));
 
         final NodeInfo.Builder exporter = NodeInfo.newBuilder();
         exporter.setNodeId(this.nodeId);
@@ -144,6 +151,8 @@ public class Exporter {
                 Objects.equals(foreignId, exporter.foreignId) &&
                 Objects.equals(location, exporter.location) &&
                 Objects.equals(generator, exporter.generator) &&
+                Objects.equals(inputSnmp, exporter.inputSnmp) &&
+                Objects.equals(outputSnmp, exporter.outputSnmp) &&
                 Objects.equals(clockOffset, exporter.clockOffset);
     }
 
@@ -156,6 +165,8 @@ public class Exporter {
                 ", location='" + location + '\'' +
                 ", generator=" + generator +
                 ", clockOffset=" + clockOffset +
+                ", inputSnmp=" + inputSnmp +
+                ", outputSnmp=" + outputSnmp +
                 '}';
     }
 
@@ -186,6 +197,8 @@ public class Exporter {
     }
 
     public static class Builder {
+        private int inputSnmp = 0;
+        private int outputSnmp = 0;
         private int nodeId = 0;
 
         private String foreignId = "";
@@ -248,6 +261,16 @@ public class Exporter {
 
         public Builder withActiveTimeout(final Duration activeTimeout) {
             this.generator.withActiveTimeout(activeTimeout);
+            return this;
+        }
+
+        public Builder withInputSnmp(final int inputSnmp) {
+            this.inputSnmp = inputSnmp;
+            return this;
+        }
+
+        public Builder withOutputSnmp(final int outputSnmp) {
+            this.outputSnmp = outputSnmp;
             return this;
         }
 

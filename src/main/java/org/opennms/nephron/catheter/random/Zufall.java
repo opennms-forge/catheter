@@ -43,6 +43,9 @@ public abstract class Zufall<T> {
     }
 
     public T random() {
+        if (this.range == 0) {
+            return fromLong(this.start);
+        }
         final long l = this.start + Math.abs(random.nextLong()) % (this.range);
         return this.fromLong(l);
     }

@@ -93,11 +93,11 @@ public class Exporter {
     }
 
     public Collection<FlowDocument> tick(final Instant now) {
-        return this.generator.tick(now.plus(this.clockOffset)).stream().map(this::createFlowDocument).collect(Collectors.toList());
+        return this.generator.tick(now).stream().map(this::createFlowDocument).collect(Collectors.toList());
     }
 
     public Collection<FlowDocument> shutdown(final Instant now) {
-        return this.generator.shutdown(now.plus(this.clockOffset)).stream().map(this::createFlowDocument).collect(Collectors.toList());
+        return this.generator.shutdown(now).stream().map(this::createFlowDocument).collect(Collectors.toList());
     }
 
     private FlowDocument createFlowDocument(final FlowReport report) {
@@ -124,9 +124,9 @@ public class Exporter {
         flow.setDstAddress(InetAddresses.toAddrString(dstAddr.address));
         flow.setSrcHostname(srcAddr.hostname);
         flow.setDstHostname(dstAddr.hostname);
-        flow.setFirstSwitched(UInt64Value.of(report.getStart().toEpochMilli()));
-        flow.setDeltaSwitched(UInt64Value.of(report.getStart().toEpochMilli()));
-        flow.setLastSwitched(UInt64Value.of(report.getEnd().toEpochMilli()));
+        flow.setFirstSwitched(UInt64Value.of(report.getStart().plus(this.clockOffset).toEpochMilli()));
+        flow.setDeltaSwitched(UInt64Value.of(report.getStart().plus(this.clockOffset).toEpochMilli()));
+        flow.setLastSwitched(UInt64Value.of(report.getEnd().plus(this.clockOffset).toEpochMilli()));
         flow.setNumBytes(UInt64Value.of(report.getBytes()));
         flow.setConvoKey(convoKey);
         flow.setInputSnmpIfindex(UInt32Value.of(this.inputSnmp));
@@ -172,7 +172,7 @@ public class Exporter {
 
     @Override
     public int hashCode() {
-        return Objects.hash(protocols, applications, hosts, addresses, nodeId, foreignSource, foreignId, location, generator, clockOffset, random);
+        return Objects.hash(protocols, applications, hosts, addresses, nodeId, foreignSource, foreignId, location, generator, clockOffset, random, inputSnmp, outputSnmp);
     }
 
     private Supplier<String> generateString(final int length) {

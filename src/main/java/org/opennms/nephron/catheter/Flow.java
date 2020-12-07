@@ -36,7 +36,7 @@ import com.google.common.base.MoreObjects;
 
 public class Flow {
     private final Instant start;
-    private final Instant end;
+    private final long bytesPerSecond;
 
     /**
      * Time when flow was last reported
@@ -49,10 +49,9 @@ public class Flow {
     private long bytes;
 
     public Flow(final Instant start,
-                final Instant end) {
+                final long bytesPerSecond) {
         this.start = Objects.requireNonNull(start);
-        this.end = Objects.requireNonNull(end);
-
+        this.bytesPerSecond = bytesPerSecond;
         this.reported = start;
         this.bytes = 0;
     }
@@ -61,23 +60,15 @@ public class Flow {
         return this.start;
     }
 
-    public Instant getEnd() {
-        return this.end;
-    }
-
     public boolean checkTimeout(final Instant now, final Duration activeTimeout) {
         return !this.reported.plus(activeTimeout).isAfter(now);
-    }
-
-    public boolean checkFinished(final Instant now) {
-        return !this.end.isAfter(now);
     }
 
     protected FlowReport report(final Instant now) {
         // Create report of current stats
         // Report the real flow end if the flow has ended
         final FlowReport report = new FlowReport(this.reported,
-                this.end.isBefore(now) ? this.end : now,
+                now,
                 this.bytes);
 
         // Reset the stats
@@ -91,6 +82,10 @@ public class Flow {
         this.bytes += bytes;
     }
 
+    public long getBytesPerSecond() {
+        return bytesPerSecond;
+    }
+
     @Override
     public boolean equals(final Object o) {
         if (this == o) return true;
@@ -98,22 +93,22 @@ public class Flow {
         Flow flow = (Flow) o;
         return bytes == flow.bytes &&
                 Objects.equals(start, flow.start) &&
-                Objects.equals(end, flow.end) &&
+                Objects.equals(bytesPerSecond, flow.bytesPerSecond) &&
                 Objects.equals(reported, flow.reported);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(start, end, reported, bytes);
+        return Objects.hash(start, reported, bytes, bytesPerSecond);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                 .add("start", this.start)
-                .add("end", this.end)
                 .add("lastReported", this.reported)
                 .add("bytes", this.bytes)
+                .add("bytesPerSecond", this.bytesPerSecond)
                 .toString();
     }
 }

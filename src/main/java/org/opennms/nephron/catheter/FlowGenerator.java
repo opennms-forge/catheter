@@ -35,9 +35,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import org.opennms.nephron.catheter.random.DurationZufall;
-import org.opennms.nephron.catheter.random.InstantZufall;
+import org.opennms.nephron.catheter.random.IntegerZufall;
 import org.opennms.nephron.catheter.random.Zufall;
 
 import com.google.common.collect.Lists;
@@ -74,30 +75,17 @@ public class FlowGenerator {
     }
 
     public Collection<FlowReport> tick(final Instant now) {
-        // Create new flows if limit is not reached
-        if (this.ongoingFlows.isEmpty() || (this.ongoingFlows.size() < this.maxFlowCount && random.nextBoolean())) {
-            // Flow started somewhere between last tick and this one
-            final Instant start = new InstantZufall(random, this.lastTick, now).random();
-
-            // Add the flow to the list of ongoing flows so it will get its share later on
-            this.ongoingFlows.add(new Flow(start, now.plus(this.flowDuration.random())));
-        }
-
-        // Give all ongoing flows a share of the overall transmitted bytes
-        final long bytesInTick = this.bytesPerSecond * Duration.between(this.lastTick, now).toMillis() / 1000L;
-
-        final long[] shares = shares(ongoingFlows.size(), bytesInTick);
-        for (int i = 0; i < this.ongoingFlows.size(); i++) {
-            this.ongoingFlows.get(i).transmit(shares[i]);
-        }
-
+        final Duration tick = Duration.ofMillis(now.toEpochMilli() - lastTick.toEpochMilli());
         final List<FlowReport> reports = Lists.newArrayList();
 
         for (final Iterator<Flow> it = this.ongoingFlows.iterator(); it.hasNext(); ) {
             final Flow flow = it.next();
 
-            // Check for flows that ended and generate a last report
-            if (flow.checkFinished(now)) {
+            // End flows, probability depends of the flow's duration
+            final Duration duration = Duration.ofMillis(now.toEpochMilli() - flow.getStart().toEpochMilli());
+            final Duration randomDuration = flowDuration.random();
+
+            if (duration.toMillis() > randomDuration.toMillis()) {
                 reports.add(flow.report(now));
                 it.remove();
             }
@@ -106,6 +94,35 @@ public class FlowGenerator {
             if (flow.checkTimeout(now, this.activeTimeout)) {
                 reports.add(flow.report(now));
             }
+        }
+
+        // compute the missing bytesPerSecond due to ended flows
+        long deltaBytesPerSecond = this.bytesPerSecond - this.ongoingFlows.stream().mapToLong(Flow::getBytesPerSecond).sum();
+
+        if (deltaBytesPerSecond > 0) {
+            final IntegerZufall zl = new IntegerZufall(random, 1, maxFlowCount - ongoingFlows.size());
+            int flowsToSpawn = zl.random();
+
+            while (flowsToSpawn > 1 && deltaBytesPerSecond / flowsToSpawn < 1000) {
+                flowsToSpawn--;
+            }
+
+            final long share = deltaBytesPerSecond / flowsToSpawn;
+            for (int i = 0; i < flowsToSpawn; i++) {
+                final Flow flow = new Flow(now, i == flowsToSpawn - 1 ? deltaBytesPerSecond : share);
+                deltaBytesPerSecond -= share;
+                this.ongoingFlows.add(flow);
+            }
+        }
+
+        double error = 0.0;
+
+        double byteRate = ((double) tick.toMillis()) / 1000.0;
+
+        for (final Flow flow : this.ongoingFlows) {
+            double rate = Math.floor(error + byteRate * (double) flow.getBytesPerSecond());
+            error = (error + byteRate * (double) flow.getBytesPerSecond()) - rate;
+            flow.transmit((long) rate);
         }
 
         this.lastTick = now;
@@ -124,20 +141,6 @@ public class FlowGenerator {
         this.ongoingFlows.clear();
 
         return reports;
-    }
-
-    private long[] shares(final int count, final long overall) {
-        long remaining = overall;
-
-        final long[] shares = new long[count];
-        for (int i = 0; i < count - 1; i++) {
-            shares[i] = (long) (random.nextDouble() * remaining);
-            remaining -= shares[i];
-        }
-
-        shares[count - 1] = remaining;
-
-        return shares;
     }
 
     @Override

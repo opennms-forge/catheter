@@ -86,7 +86,7 @@ public class Simulation {
         this.flowTopic = Objects.requireNonNull(builder.flowTopic);
         this.tickMs = Objects.requireNonNull(builder.tickMs);
         this.realtime = builder.realtime;
-        this.startTime = builder.startTime != null ? builder.startTime : Instant.now();
+        this.startTime = Instant.ofEpochMilli(builder.startTime != null ? builder.startTime.toEpochMilli() : Instant.now().toEpochMilli() / builder.tickMs.toMillis() * builder.tickMs.toMillis());
         this.random.setSeed(builder.seed);
         this.exporters = builder.exporters.stream().map(e -> e.build(this.startTime, random)).collect(Collectors.toList());
     }
@@ -197,6 +197,9 @@ public class Simulation {
         Instant now = startTime;
 
         while (running.get()) {
+            now = now.plus(tickMs);
+            elapsedTime = Duration.between(startTime, now);
+
             if (maxIterations > 0) {
                 maxIterations--;
                 if (maxIterations==0) {
@@ -205,17 +208,17 @@ public class Simulation {
             }
 
             if (realtime) {
-                try {
-                    Thread.sleep(tickMs.toMillis());
-                } catch (InterruptedException e) {
-                    LOG.warn("Simulation: exception while Thread.sleep()", e);
+                final long timeToSleep = now.plus(tickMs).toEpochMilli() - Instant.now().toEpochMilli();
+                if (timeToSleep > 0) {
+                    try {
+                        LOG.trace("Sleeping for {} ms...", timeToSleep);
+                        Thread.sleep(timeToSleep);
+                    } catch (InterruptedException e) {
+                        LOG.warn("Simulation: exception while Thread.sleep()", e);
+                    }
                 }
-                now = Instant.now();
-            } else {
-                now = now.plus(tickMs);
             }
 
-            elapsedTime = Duration.between(startTime, now);
 
             for (final Exporter exporter : exporters) {
                 sendFlowDocuments(kafkaProducer, exporter.tick(now));
@@ -274,7 +277,7 @@ public class Simulation {
         public String flowTopic = NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC;
         public long seed = new Random().nextLong();
         private String bootstrapServers;
-        private Duration tickMs;
+        private Duration tickMs = Duration.ofMillis(250);
         private boolean realtime;
         private Instant startTime;
         private final List<Exporter.Builder> exporters = new ArrayList<>();

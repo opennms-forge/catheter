@@ -28,8 +28,10 @@
 
 package org.opennms.nephron.catheter;
 
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.time.Duration;
@@ -71,8 +73,6 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.KafkaContainer;
 
 import com.google.common.collect.ImmutableMap;
-import static org.awaitility.Awaitility.*;
-import static org.junit.Assert.assertTrue;
 
 public class CatheterIT {
     private static final Logger LOG = LoggerFactory.getLogger(CatheterIT.class);
@@ -92,6 +92,7 @@ public class CatheterIT {
         simulationJson.setFlowTopic(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC);
         simulationJson.setRealtime(true);
         simulationJson.setStartTime(Instant.now());
+        simulationJson.setTickMs(250);
 
         final FlowGeneratorJson flowGeneratorJson1 = new FlowGeneratorJson();
         flowGeneratorJson1.setActiveTimeoutMs(1000);
@@ -125,7 +126,7 @@ public class CatheterIT {
         // setup consumer
         final KafkaConsumer<String, FlowDocument> kafkaConsumer = createConsumer();
         // check whether data arrive...
-        await().pollDelay(Duration.ofSeconds(1)).atMost(Duration.ofMinutes(1)).until(() -> kafkaConsumer.poll(250).count()>0);
+        await().pollDelay(Duration.ofSeconds(1)).atMost(Duration.ofMinutes(1)).until(() -> kafkaConsumer.poll(250).count() > 0);
         // close the consumer
         kafkaConsumer.close();
     }
@@ -169,7 +170,7 @@ public class CatheterIT {
             final ConsumerRecords<String, FlowDocument> records = kafkaConsumer.poll(1000);
             received.addAndGet(records.count());
 
-            for(final ConsumerRecord<String, FlowDocument> record : records) {
+            for (final ConsumerRecord<String, FlowDocument> record : records) {
                 flows.add(record.value());
             }
 
@@ -180,12 +181,12 @@ public class CatheterIT {
 
         LOG.debug("Now: " + now + " Future: " + future);
 
-        for(final FlowDocument flowDocument : flows) {
+        for (final FlowDocument flowDocument : flows) {
             final Instant first = Instant.ofEpochMilli(flowDocument.getFirstSwitched().getValue());
             final Instant last = Instant.ofEpochMilli(flowDocument.getLastSwitched().getValue());
             final Instant delta = Instant.ofEpochMilli(flowDocument.getDeltaSwitched().getValue());
 
-            LOG.debug("First: " + first + " Last: "+last);
+            LOG.debug("First: " + first + " Last: " + last);
 
             assertTrue(first.equals(delta));
             assertTrue(first.isBefore(last));
@@ -241,7 +242,7 @@ public class CatheterIT {
             final ConsumerRecords<String, FlowDocument> records = kafkaConsumer.poll(1000);
             received.addAndGet(records.count());
 
-            for(final ConsumerRecord<String, FlowDocument> record : records) {
+            for (final ConsumerRecord<String, FlowDocument> record : records) {
                 flows.add(record.value());
             }
 
@@ -252,12 +253,12 @@ public class CatheterIT {
 
         LOG.debug("Now: " + now + " Future: " + future);
 
-        for(final FlowDocument flowDocument : flows) {
+        for (final FlowDocument flowDocument : flows) {
             final Instant first = Instant.ofEpochMilli(flowDocument.getFirstSwitched().getValue());
             final Instant last = Instant.ofEpochMilli(flowDocument.getLastSwitched().getValue());
             final Instant delta = Instant.ofEpochMilli(flowDocument.getDeltaSwitched().getValue());
 
-            LOG.debug("First: " + first + " Last: "+last);
+            LOG.debug("First: " + first + " Last: " + last);
 
             assertTrue(first.equals(delta));
             assertTrue(first.isBefore(last));
@@ -355,14 +356,14 @@ public class CatheterIT {
             final ConsumerRecords<String, FlowDocument> records = kafkaConsumer.poll(1000);
             received.addAndGet(records.count());
 
-            for(final ConsumerRecord<String, FlowDocument> record : records) {
+            for (final ConsumerRecord<String, FlowDocument> record : records) {
                 flows.add(record.value());
             }
 
             return received.get() >= simulation.getFlowsSent();
         });
 
-        for(FlowDocument flowDocument : flows) {
+        for (FlowDocument flowDocument : flows) {
             assertThat(flowDocument.getInputSnmpIfindex().getValue(), is(98));
             assertThat(flowDocument.getOutputSnmpIfindex().getValue(), is(99));
         }
@@ -376,11 +377,9 @@ public class CatheterIT {
         // create random seed
         long seed = new Random().nextLong();
 
-        final Instant now = Instant.ofEpochMilli(1_500_000_000_000L);
-
         final KafkaConsumer<String, FlowDocument> kafkaConsumer = createConsumer();
 
-        final Simulation s1 = createSimulationWithSeed(now, seed);
+        final Simulation s1 = createSimulation(false, false, seed);
 
         // run first simulation with seed
         s1.start(20);
@@ -394,14 +393,14 @@ public class CatheterIT {
             final ConsumerRecords<String, FlowDocument> records = kafkaConsumer.poll(1000);
             received1.addAndGet(records.count());
 
-            for(final ConsumerRecord<String, FlowDocument> record : records) {
+            for (final ConsumerRecord<String, FlowDocument> record : records) {
                 flows1.add(record.value());
             }
 
             return received1.get() >= s1.getFlowsSent();
         });
 
-        final Simulation s2 = createSimulationWithSeed(now, seed);
+        final Simulation s2 = createSimulation(false, false, seed);
 
         // run second simulation with same seed
         s2.start(20);
@@ -415,7 +414,7 @@ public class CatheterIT {
             final ConsumerRecords<String, FlowDocument> records = kafkaConsumer.poll(1000);
             received2.addAndGet(records.count());
 
-            for(final ConsumerRecord<String, FlowDocument> record : records) {
+            for (final ConsumerRecord<String, FlowDocument> record : records) {
                 flows2.add(record.value());
             }
 
@@ -431,19 +430,19 @@ public class CatheterIT {
         kafkaConsumer.close();
     }
 
-    private Simulation createSimulationWithSeed(final Instant now, final long seed) {
-        return Simulation.builder()
+    public Simulation createSimulation(final boolean realtime, final boolean clockSkew, final Long seed) {
+        final Simulation simulation = Simulation.builder()
                 .withBootstrapServers(kafka.getBootstrapServers())
                 .withFlowTopic(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC)
-                .withRealtime(false)
-                .withStartTime(now)
-                .withTickMs(Duration.ofMillis(50))
+                .withRealtime(realtime)
+                .withStartTime(realtime ? Instant.now() : Instant.ofEpochMilli(1_500_000_000_000L))
+                .withTickMs(Duration.ofMillis(250))
                 .withExporters(
                         Exporter.builder()
                                 .withNodeId(1)
                                 .withForeignSource("exporters")
                                 .withForeignId("test1")
-                                .withClockOffset(Duration.ofSeconds(-10))
+                                .withClockOffset(clockSkew ? Duration.ofSeconds(-10) : Duration.ZERO)
                                 .withGenerator(FlowGenerator.builder()
                                         .withBytesPerSecond(750_000L)
                                         .withMaxFlowCount(10)
@@ -454,7 +453,7 @@ public class CatheterIT {
                                 .withNodeId(2)
                                 .withForeignSource("exporters")
                                 .withForeignId("test2")
-                                .withClockOffset(Duration.ofSeconds(10))
+                                .withClockOffset(clockSkew ? Duration.ofSeconds(10) : Duration.ZERO)
                                 .withGenerator(FlowGenerator.builder()
                                         .withBytesPerSecond(250_000L)
                                         .withMaxFlowCount(10)
@@ -462,83 +461,30 @@ public class CatheterIT {
                                         .withMinFlowDuration(Duration.ofSeconds(2))
                                         .withMaxFlowDuration(Duration.ofSeconds(15)))
                 )
-                .withSeed(seed)
+                .withSeed(seed != null ? seed : System.currentTimeMillis())
                 .build();
+
+        return simulation;
     }
 
     @Test
     public void testRealtime() {
-        final Simulation simulation = Simulation.builder()
-                .withBootstrapServers(kafka.getBootstrapServers())
-                .withFlowTopic(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC)
-                .withRealtime(true)
-                .withTickMs(Duration.ofMillis(250))
-                .withExporters(
-                        Exporter.builder()
-                                .withNodeId(1)
-                                .withForeignSource("exporters")
-                                .withForeignId("test1")
-                                .withClockOffset(Duration.ofSeconds(-10))
-                                .withGenerator(FlowGenerator.builder()
-                                        .withBytesPerSecond(750_000L)
-                                        .withMaxFlowCount(10)
-                                        .withActiveTimeout(Duration.ofSeconds(2))
-                                        .withMinFlowDuration(Duration.ofSeconds(1))
-                                        .withMaxFlowDuration(Duration.ofSeconds(20))),
-                        Exporter.builder()
-                                .withNodeId(2)
-                                .withForeignSource("exporters")
-                                .withForeignId("test2")
-                                .withClockOffset(Duration.ofSeconds(10))
-                                .withGenerator(FlowGenerator.builder()
-                                        .withBytesPerSecond(250_000L)
-                                        .withMaxFlowCount(10)
-                                        .withActiveTimeout(Duration.ofSeconds(1))
-                                        .withMinFlowDuration(Duration.ofSeconds(2))
-                                        .withMaxFlowDuration(Duration.ofSeconds(15)))
-                        )
-                .build();
+        runSimulation(createSimulation(true, false, null), Duration.ofSeconds(5));
+    }
 
-        runSimulation(simulation, Duration.ofSeconds(5));
+    @Test
+    public void testRealtimeWithClockSkew() {
+        runSimulation(createSimulation(true, true, null), Duration.ofSeconds(5));
     }
 
     @Test
     public void testNonRealtime() {
-        final Instant now = Instant.ofEpochMilli(1_500_000_000_000L);
+        runSimulation(createSimulation(false, false, null), Duration.ofSeconds(5));
+    }
 
-        final Simulation simulation = Simulation.builder()
-                .withBootstrapServers(kafka.getBootstrapServers())
-                .withFlowTopic(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC)
-                .withRealtime(false)
-                .withTickMs(Duration.ofMillis(250))
-                .withStartTime(now)
-                .withExporters(
-                        Exporter.builder()
-                                .withNodeId(1)
-                                .withForeignSource("exporters")
-                                .withForeignId("test1")
-                                .withClockOffset(Duration.ofSeconds(-10))
-                                .withGenerator(FlowGenerator.builder()
-                                        .withBytesPerSecond(750_000L)
-                                        .withMaxFlowCount(10)
-                                        .withActiveTimeout(Duration.ofSeconds(2))
-                                        .withMinFlowDuration(Duration.ofSeconds(1))
-                                        .withMaxFlowDuration(Duration.ofSeconds(20))),
-                        Exporter.builder()
-                                .withNodeId(2)
-                                .withForeignSource("exporters")
-                                .withForeignId("test2")
-                                .withClockOffset(Duration.ofSeconds(10))
-                                .withGenerator(FlowGenerator.builder()
-                                        .withBytesPerSecond(250_000L)
-                                        .withMaxFlowCount(10)
-                                        .withActiveTimeout(Duration.ofSeconds(1))
-                                        .withMinFlowDuration(Duration.ofSeconds(2))
-                                        .withMaxFlowDuration(Duration.ofSeconds(15)))
-                )
-                .build();
-
-        runSimulation(simulation, Duration.ofSeconds(5));
+    @Test
+    public void testNonRealtimeWithClockSkew() {
+        runSimulation(createSimulation(false, true, null), Duration.ofSeconds(5));
     }
 
     public void runSimulation(final Simulation simulation, final Duration duration) {
@@ -567,6 +513,11 @@ public class CatheterIT {
         LOG.debug("Simulation reported {} bytes in total", simulation.getBytesSent());
         LOG.debug("Simulation rate was {} byte/sec", rateSent);
 
+        for (int i = -40; i < 40; i++) {
+            final long rateSentX = (long) ((double) simulation.getBytesSent() / (double) ((i * 250) + simulation.getElapsedTime().toMillis()) * 1000.0);
+            LOG.debug("Simulation rate (" + (i * 250) + "ms) was {} byte/sec", rateSentX);
+        }
+
         assertThat(rateSent, is(1000000L));
 
         final KafkaConsumer<String, FlowDocument> kafkaConsumer = createConsumer();
@@ -578,7 +529,7 @@ public class CatheterIT {
             final ConsumerRecords<String, FlowDocument> records = kafkaConsumer.poll(1000);
             flowsReceived.addAndGet(records.count());
 
-            for(final ConsumerRecord<String, FlowDocument> record : records) {
+            for (final ConsumerRecord<String, FlowDocument> record : records) {
                 bytesReceived.addAndGet(record.value().getNumBytes().getValue());
             }
 
@@ -597,12 +548,12 @@ public class CatheterIT {
         kafkaConsumer.close();
     }
 
-    private void createTopics(String ... topics) {
+    private void createTopics(String... topics) {
         final List<NewTopic> newTopics =
                 Arrays.stream(topics)
                         .map(topic -> new NewTopic(topic, 1, (short) 1))
                         .collect(Collectors.toList());
-        try (final AdminClient admin = AdminClient.create(ImmutableMap.<String,Object>builder()
+        try (final AdminClient admin = AdminClient.create(ImmutableMap.<String, Object>builder()
                 .put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers())
                 .build())) {
             admin.createTopics(newTopics);

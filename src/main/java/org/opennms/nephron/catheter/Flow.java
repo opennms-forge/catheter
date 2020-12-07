@@ -37,15 +37,7 @@ import com.google.common.base.MoreObjects;
 public class Flow {
     private final Instant start;
     private final long bytesPerSecond;
-
-    /**
-     * Time when flow was last reported
-     **/
     private Instant reported;
-
-    /**
-     * Bytes transmitted since last report
-     **/
     private long bytes;
 
     public Flow(final Instant start,
@@ -83,23 +75,23 @@ public class Flow {
     }
 
     public long getBytesPerSecond() {
-        return bytesPerSecond;
+        return this.bytesPerSecond;
     }
 
     @Override
     public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Flow flow = (Flow) o;
-        return bytes == flow.bytes &&
-                Objects.equals(start, flow.start) &&
-                Objects.equals(bytesPerSecond, flow.bytesPerSecond) &&
-                Objects.equals(reported, flow.reported);
+        final Flow flow = (Flow) o;
+        return this.bytes == flow.bytes &&
+                Objects.equals(this.start, flow.start) &&
+                Objects.equals(this.bytesPerSecond, flow.bytesPerSecond) &&
+                Objects.equals(this.reported, flow.reported);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(start, reported, bytes, bytesPerSecond);
+        return Objects.hash(this.start, this.reported, this.bytes, this.bytesPerSecond);
     }
 
     @Override

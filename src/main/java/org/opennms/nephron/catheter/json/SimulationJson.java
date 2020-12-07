@@ -41,17 +41,11 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 @XmlRootElement(name = "simulation")
 public class SimulationJson {
     private String bootstrapServers = "";
-
     private String flowTopic = "";
-
     private long tickMs = 250;
-
     private boolean realtime = false;
-
     private Instant startTime = Instant.now();
-
     private List<ExporterJson> exporters = new ArrayList<>();
-
     private long seed = new Random().nextLong();
 
     public SimulationJson() {
@@ -59,7 +53,7 @@ public class SimulationJson {
 
     @XmlElement(name = "bootStrapServers")
     public String getBootstrapServers() {
-        return bootstrapServers;
+        return this.bootstrapServers;
     }
 
     public void setBootstrapServers(final String bootstrapServers) {
@@ -68,7 +62,7 @@ public class SimulationJson {
 
     @XmlElement(name = "flowTopic")
     public String getFlowTopic() {
-        return flowTopic;
+        return this.flowTopic;
     }
 
     public void setFlowTopic(final String flowTopic) {
@@ -77,7 +71,7 @@ public class SimulationJson {
 
     @XmlElement(name = "tickMs")
     public long getTickMs() {
-        return tickMs;
+        return this.tickMs;
     }
 
     public void setTickMs(final long tickMs) {
@@ -86,7 +80,7 @@ public class SimulationJson {
 
     @XmlElement(name = "realtime")
     public boolean getRealtime() {
-        return realtime;
+        return this.realtime;
     }
 
     public void setRealtime(final boolean realtime) {
@@ -96,7 +90,7 @@ public class SimulationJson {
     @XmlElement(name = "startTime")
     @XmlJavaTypeAdapter(InstantXmlAdapter.class)
     public Instant getStartTime() {
-        return startTime;
+        return this.startTime;
     }
 
     public void setStartTime(final Instant startTime) {
@@ -104,7 +98,7 @@ public class SimulationJson {
     }
 
     public List<ExporterJson> getExporters() {
-        return exporters;
+        return this.exporters;
     }
 
     public void setExporters(final List<ExporterJson> exporters) {
@@ -113,7 +107,7 @@ public class SimulationJson {
 
     @XmlElement(name = "seed")
     public long getSeed() {
-        return seed;
+        return this.seed;
     }
 
     public void setSeed(final long seed) {
@@ -124,31 +118,31 @@ public class SimulationJson {
     public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        SimulationJson that = (SimulationJson) o;
-        return tickMs == that.tickMs &&
-                realtime == that.realtime &&
-                seed == that.seed &&
-                Objects.equals(bootstrapServers, that.bootstrapServers) &&
-                Objects.equals(flowTopic, that.flowTopic) &&
-                Objects.equals(startTime, that.startTime) &&
-                Objects.equals(exporters, that.exporters);
+        final SimulationJson that = (SimulationJson) o;
+        return this.tickMs == that.tickMs &&
+                this.realtime == that.realtime &&
+                this.seed == that.seed &&
+                Objects.equals(this.bootstrapServers, that.bootstrapServers) &&
+                Objects.equals(this.flowTopic, that.flowTopic) &&
+                Objects.equals(this.startTime, that.startTime) &&
+                Objects.equals(this.exporters, that.exporters);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(bootstrapServers, flowTopic, tickMs, realtime, startTime, exporters, seed);
+        return Objects.hash(this.bootstrapServers, this.flowTopic, this.tickMs, this.realtime, this.startTime, this.exporters, this.seed);
     }
 
     @Override
     public String toString() {
         return "SimulationJson{" +
-                "bootstrapServers='" + bootstrapServers + '\'' +
-                ", flowTopic='" + flowTopic + '\'' +
-                ", tickMs=" + tickMs +
-                ", realtime=" + realtime +
-                ", startTime=" + startTime +
-                ", exporters=" + exporters +
-                ", seed=" + seed +
+                "bootstrapServers='" + this.bootstrapServers + '\'' +
+                ", flowTopic='" + this.flowTopic + '\'' +
+                ", tickMs=" + this.tickMs +
+                ", realtime=" + this.realtime +
+                ", startTime=" + this.startTime +
+                ", exporters=" + this.exporters +
+                ", seed=" + this.seed +
                 '}';
     }
 }

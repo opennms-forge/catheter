@@ -35,10 +35,8 @@ import java.util.Objects;
 import com.google.common.base.MoreObjects;
 
 public class FlowReport {
-
     private final Instant start;
     private final Instant end;
-
     private final long bytes;
 
     public FlowReport(final Instant start,
@@ -69,15 +67,15 @@ public class FlowReport {
     public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        FlowReport that = (FlowReport) o;
-        return bytes == that.bytes &&
-                Objects.equals(start, that.start) &&
-                Objects.equals(end, that.end);
+        final FlowReport that = (FlowReport) o;
+        return this.bytes == that.bytes &&
+                Objects.equals(this.start, that.start) &&
+                Objects.equals(this.end, that.end);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(start, end, bytes);
+        return Objects.hash(this.start, this.end, this.bytes);
     }
 
     @Override

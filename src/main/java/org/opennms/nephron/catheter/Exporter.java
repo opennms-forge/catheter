@@ -54,14 +54,10 @@ public class Exporter {
     private final List<String> applications;
     private final List<String> hosts;
     private final List<AddrHost> addresses;
-
     private final int nodeId;
-
     private final String foreignSource;
     private final String foreignId;
-
     private final String location;
-
     private final FlowGenerator generator;
     private final Duration clockOffset;
     private final Random random;
@@ -101,11 +97,11 @@ public class Exporter {
     }
 
     private FlowDocument createFlowDocument(final FlowReport report) {
-        final int protocol = choose(protocols);
-        final String application = choose(applications);
+        final int protocol = choose(this.protocols);
+        final String application = choose(this.applications);
 
-        final AddrHost srcAddr = choose(addresses);
-        final AddrHost dstAddr = choose(addresses);
+        final AddrHost srcAddr = choose(this.addresses);
+        final AddrHost dstAddr = choose(this.addresses);
 
         final InetAddress[] convo = InetAddresses.coerceToInteger(srcAddr.address) < InetAddresses.coerceToInteger(dstAddr.address)
                 ? new InetAddress[]{srcAddr.address, dstAddr.address}
@@ -115,7 +111,7 @@ public class Exporter {
 
         final FlowDocument.Builder flow = FlowDocument.newBuilder();
         flow.setApplication(application);
-        flow.setHost(choose(hosts));
+        flow.setHost(choose(this.hosts));
         flow.setLocation(this.location);
         flow.setDstLocality(Locality.PUBLIC);
         flow.setSrcLocality(Locality.PUBLIC);
@@ -145,34 +141,34 @@ public class Exporter {
     public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Exporter exporter = (Exporter) o;
-        return nodeId == exporter.nodeId &&
-                Objects.equals(foreignSource, exporter.foreignSource) &&
-                Objects.equals(foreignId, exporter.foreignId) &&
-                Objects.equals(location, exporter.location) &&
-                Objects.equals(generator, exporter.generator) &&
-                Objects.equals(inputSnmp, exporter.inputSnmp) &&
-                Objects.equals(outputSnmp, exporter.outputSnmp) &&
-                Objects.equals(clockOffset, exporter.clockOffset);
+        final Exporter exporter = (Exporter) o;
+        return this.nodeId == exporter.nodeId &&
+                Objects.equals(this.foreignSource, exporter.foreignSource) &&
+                Objects.equals(this.foreignId, exporter.foreignId) &&
+                Objects.equals(this.location, exporter.location) &&
+                Objects.equals(this.generator, exporter.generator) &&
+                Objects.equals(this.inputSnmp, exporter.inputSnmp) &&
+                Objects.equals(this.outputSnmp, exporter.outputSnmp) &&
+                Objects.equals(this.clockOffset, exporter.clockOffset);
     }
 
     @Override
     public String toString() {
         return "Exporter{" +
-                "nodeId=" + nodeId +
-                ", foreignSource='" + foreignSource + '\'' +
-                ", foreignId='" + foreignId + '\'' +
-                ", location='" + location + '\'' +
-                ", generator=" + generator +
-                ", clockOffset=" + clockOffset +
-                ", inputSnmp=" + inputSnmp +
-                ", outputSnmp=" + outputSnmp +
+                "nodeId=" + this.nodeId +
+                ", foreignSource='" + this.foreignSource + '\'' +
+                ", foreignId='" + this.foreignId + '\'' +
+                ", location='" + this.location + '\'' +
+                ", generator=" + this.generator +
+                ", clockOffset=" + this.clockOffset +
+                ", inputSnmp=" + this.inputSnmp +
+                ", outputSnmp=" + this.outputSnmp +
                 '}';
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(protocols, applications, hosts, addresses, nodeId, foreignSource, foreignId, location, generator, clockOffset, random, inputSnmp, outputSnmp);
+        return Objects.hash(this.protocols, this.applications, this.hosts, this.addresses, this.nodeId, this.foreignSource, this.foreignId, this.location, this.generator, this.clockOffset, this.random, this.inputSnmp, this.outputSnmp);
     }
 
     private Supplier<String> generateString(final int length) {

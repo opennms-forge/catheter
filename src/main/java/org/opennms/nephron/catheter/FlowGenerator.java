@@ -35,7 +35,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 import org.opennms.nephron.catheter.random.DurationZufall;
 import org.opennms.nephron.catheter.random.IntegerZufall;
@@ -44,17 +43,11 @@ import org.opennms.nephron.catheter.random.Zufall;
 import com.google.common.collect.Lists;
 
 public class FlowGenerator {
-
     private final long bytesPerSecond;
-
     private final Zufall<Duration> flowDuration;
-
     private final int maxFlowCount;
-
     private final Duration activeTimeout;
-
     private final List<Flow> ongoingFlows = Lists.newArrayList();
-
     private Instant lastTick;
     private Random random;
 
@@ -100,27 +93,34 @@ public class FlowGenerator {
         long deltaBytesPerSecond = this.bytesPerSecond - this.ongoingFlows.stream().mapToLong(Flow::getBytesPerSecond).sum();
 
         if (deltaBytesPerSecond > 0) {
+            // determine the number of flows to spawn
             final IntegerZufall zl = new IntegerZufall(random, 1, maxFlowCount - ongoingFlows.size());
             int flowsToSpawn = zl.random();
 
+            // if byte rate is to low reduce the number of flows
             while (flowsToSpawn > 1 && deltaBytesPerSecond / flowsToSpawn < 1000) {
                 flowsToSpawn--;
             }
 
+            // compute the share of byte rate for the flows to spawn
             final long share = deltaBytesPerSecond / flowsToSpawn;
             for (int i = 0; i < flowsToSpawn; i++) {
+                // add the share or use the remaining byte rate to reduce the overall error
                 final Flow flow = new Flow(now, i == flowsToSpawn - 1 ? deltaBytesPerSecond : share);
                 deltaBytesPerSecond -= share;
                 this.ongoingFlows.add(flow);
             }
         }
 
+        // with floor() we will loose bytes and round() will add bytes, so we need an error variable
         double error = 0.0;
 
         double byteRate = ((double) tick.toMillis()) / 1000.0;
 
         for (final Flow flow : this.ongoingFlows) {
+            // add error to computation
             double rate = Math.floor(error + byteRate * (double) flow.getBytesPerSecond());
+            // set the error we have at this point
             error = (error + byteRate * (double) flow.getBytesPerSecond()) - rate;
             flow.transmit((long) rate);
         }
@@ -147,28 +147,28 @@ public class FlowGenerator {
     public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        FlowGenerator that = (FlowGenerator) o;
-        return bytesPerSecond == that.bytesPerSecond &&
-                maxFlowCount == that.maxFlowCount &&
-                Objects.equals(flowDuration, that.flowDuration) &&
-                Objects.equals(activeTimeout, that.activeTimeout) &&
-                Objects.equals(lastTick, that.lastTick);
+        final FlowGenerator that = (FlowGenerator) o;
+        return this.bytesPerSecond == that.bytesPerSecond &&
+                this.maxFlowCount == that.maxFlowCount &&
+                Objects.equals(this.flowDuration, that.flowDuration) &&
+                Objects.equals(this.activeTimeout, that.activeTimeout) &&
+                Objects.equals(this.lastTick, that.lastTick);
     }
 
     @Override
     public String toString() {
         return "FlowGenerator{" +
-                "bytesPerSecond=" + bytesPerSecond +
-                ", flowDuration=" + flowDuration +
-                ", maxFlowCount=" + maxFlowCount +
-                ", activeTimeout=" + activeTimeout +
-                ", lastTick=" + lastTick +
+                "bytesPerSecond=" + this.bytesPerSecond +
+                ", flowDuration=" + this.flowDuration +
+                ", maxFlowCount=" + this.maxFlowCount +
+                ", activeTimeout=" + this.activeTimeout +
+                ", lastTick=" + this.lastTick +
                 '}';
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(bytesPerSecond, flowDuration, maxFlowCount, activeTimeout, ongoingFlows, lastTick, random);
+        return Objects.hash(this.bytesPerSecond, this.flowDuration, this.maxFlowCount, this.activeTimeout, this.ongoingFlows, this.lastTick, this.random);
     }
 
     public static class Builder {

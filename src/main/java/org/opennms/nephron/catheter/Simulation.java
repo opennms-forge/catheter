@@ -66,7 +66,6 @@ import org.slf4j.LoggerFactory;
 
 public class Simulation {
     private static final Logger LOG = LoggerFactory.getLogger(Simulation.class);
-
     private final String bootstrapServers;
     private final String flowTopic;
     private final Duration tickMs;
@@ -140,30 +139,30 @@ public class Simulation {
     public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Simulation that = (Simulation) o;
-        return realtime == that.realtime &&
-                Objects.equals(bootstrapServers, that.bootstrapServers) &&
-                Objects.equals(flowTopic, that.flowTopic) &&
-                Objects.equals(tickMs, that.tickMs) &&
-                Objects.equals(startTime, that.startTime) &&
-                Objects.equals(exporters, that.exporters);
+        final Simulation that = (Simulation) o;
+        return this.realtime == that.realtime &&
+                Objects.equals(this.bootstrapServers, that.bootstrapServers) &&
+                Objects.equals(this.flowTopic, that.flowTopic) &&
+                Objects.equals(this.tickMs, that.tickMs) &&
+                Objects.equals(this.startTime, that.startTime) &&
+                Objects.equals(this.exporters, that.exporters);
     }
 
     @Override
     public String toString() {
         return "Simulation{" +
-                "bootstrapServers='" + bootstrapServers + '\'' +
-                ", flowTopic='" + flowTopic + '\'' +
-                ", tickMs=" + tickMs +
-                ", realtime=" + realtime +
-                ", startTime=" + startTime +
-                ", exporters=" + exporters +
+                "bootstrapServers='" + this.bootstrapServers + '\'' +
+                ", flowTopic='" + this.flowTopic + '\'' +
+                ", tickMs=" + this.tickMs +
+                ", realtime=" + this.realtime +
+                ", startTime=" + this.startTime +
+                ", exporters=" + this.exporters +
                 '}';
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(bootstrapServers, flowTopic, tickMs, realtime, startTime, exporters, thread, running, elapsedTime, flowsSent, bytesSent, random, maxIterations);
+        return Objects.hash(this.bootstrapServers, this.flowTopic, this.tickMs, this.realtime, this.startTime, this.exporters, this.thread, this.running, this.elapsedTime, this.flowsSent, this.bytesSent, this.random, this.maxIterations);
     }
 
     public static Builder builder() {
@@ -176,17 +175,17 @@ public class Simulation {
 
     void start(final long maxIterations) {
         this.maxIterations = maxIterations;
-        if (!running.get()) {
-            running.set(true);
-            thread = new Thread(this::run);
-            thread.start();
+        if (!this.running.get()) {
+            this.running.set(true);
+            this.thread = new Thread(this::run);
+            this.thread.start();
         }
     }
 
     private void run() {
-        elapsedTime = Duration.ZERO;
-        flowsSent = 0;
-        bytesSent = 0;
+        this.elapsedTime = Duration.ZERO;
+        this.flowsSent = 0;
+        this.bytesSent = 0;
 
         final Map<String, Object> producerProps = new HashMap<>();
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
@@ -194,20 +193,20 @@ public class Simulation {
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
         KafkaProducer<String, byte[]> kafkaProducer = new KafkaProducer<>(producerProps);
 
-        Instant now = startTime;
+        Instant now = this.startTime;
 
-        while (running.get()) {
-            now = now.plus(tickMs);
-            elapsedTime = Duration.between(startTime, now);
+        while (this.running.get()) {
+            now = now.plus(this.tickMs);
+            this.elapsedTime = Duration.between(this.startTime, now);
 
-            if (maxIterations > 0) {
-                maxIterations--;
-                if (maxIterations == 0) {
-                    running.set(false);
+            if (this.maxIterations > 0) {
+                this.maxIterations--;
+                if (this.maxIterations == 0) {
+                    this.running.set(false);
                 }
             }
 
-            if (realtime) {
+            if (this.realtime) {
                 final Duration timeToSleep = Duration.between(Instant.now(), now);
                 if (!timeToSleep.isNegative()) {
                     try {
@@ -220,14 +219,14 @@ public class Simulation {
             }
 
 
-            for (final Exporter exporter : exporters) {
+            for (final Exporter exporter : this.exporters) {
                 sendFlowDocuments(kafkaProducer, exporter.tick(now));
             }
         }
 
-        LOG.debug("Simulation: shutting down {} exporters", exporters.size());
+        LOG.debug("Simulation: shutting down {} exporters", this.exporters.size());
 
-        for (final Exporter exporter : exporters) {
+        for (final Exporter exporter : this.exporters) {
             sendFlowDocuments(kafkaProducer, exporter.shutdown(now));
         }
 
@@ -235,42 +234,42 @@ public class Simulation {
     }
 
     private void sendFlowDocuments(final KafkaProducer<String, byte[]> kafkaProducer, final Collection<FlowDocument> flowDocuments) {
-        flowsSent += flowDocuments.size();
+        this.flowsSent += flowDocuments.size();
         for (final FlowDocument flowDocument : flowDocuments) {
-            bytesSent += flowDocument.getNumBytes().getValue();
-            kafkaProducer.send(new ProducerRecord<>(flowTopic, flowDocument.toByteArray()), (metadata, exception) -> {
+            this.bytesSent += flowDocument.getNumBytes().getValue();
+            kafkaProducer.send(new ProducerRecord<>(this.flowTopic, flowDocument.toByteArray()), (metadata, exception) -> {
                 if (exception != null) {
                     LOG.warn("Simulation: error sending flow document to Kafka topic", exception);
                 }
             });
         }
         if (!flowDocuments.isEmpty()) {
-            LOG.debug("Simulation: sent {} flow documents to Kafka topic '{}'", flowDocuments.size(), flowTopic);
+            LOG.debug("Simulation: sent {} flow documents to Kafka topic '{}'", flowDocuments.size(), this.flowTopic);
         }
     }
 
     public void join() throws InterruptedException {
-        if (thread != null) {
-            thread.join();
+        if (this.thread != null) {
+            this.thread.join();
         }
     }
 
     public void stop() {
-        if (running.get()) {
-            running.set(false);
+        if (this.running.get()) {
+            this.running.set(false);
         }
     }
 
     public Duration getElapsedTime() {
-        return elapsedTime;
+        return this.elapsedTime;
     }
 
     public long getFlowsSent() {
-        return flowsSent;
+        return this.flowsSent;
     }
 
     public long getBytesSent() {
-        return bytesSent;
+        return this.bytesSent;
     }
 
     public static class Builder {

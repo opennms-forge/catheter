@@ -46,7 +46,7 @@ public class FlowGeneratorJson {
 
     @XmlElement(name = "bytesPerSecond")
     public long getBytesPerSecond() {
-        return bytesPerSecond;
+        return this.bytesPerSecond;
     }
 
     public void setBytesPerSecond(final long bytesPerSecond) {
@@ -55,7 +55,7 @@ public class FlowGeneratorJson {
 
     @XmlElement(name = "maxFlowCount")
     public int getMaxFlowCount() {
-        return maxFlowCount;
+        return this.maxFlowCount;
     }
 
     public void setMaxFlowCount(final int maxFlowCount) {
@@ -64,7 +64,7 @@ public class FlowGeneratorJson {
 
     @XmlElement(name = "minFlowDurationMs")
     public long getMinFlowDurationMs() {
-        return minFlowDurationMs;
+        return this.minFlowDurationMs;
     }
 
     public void setMinFlowDurationMs(final long minFlowDurationMs) {
@@ -73,7 +73,7 @@ public class FlowGeneratorJson {
 
     @XmlElement(name = "maxFlowDurationMs")
     public long getMaxFlowDurationMs() {
-        return maxFlowDurationMs;
+        return this.maxFlowDurationMs;
     }
 
     public void setMaxFlowDurationMs(final long maxFlowDurationMs) {
@@ -82,7 +82,7 @@ public class FlowGeneratorJson {
 
     @XmlElement(name = "activeTimeoutMs")
     public long getActiveTimeoutMs() {
-        return activeTimeoutMs;
+        return this.activeTimeoutMs;
     }
 
     public void setActiveTimeoutMs(final long activeTimeoutMs) {
@@ -93,27 +93,27 @@ public class FlowGeneratorJson {
     public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        FlowGeneratorJson that = (FlowGeneratorJson) o;
-        return bytesPerSecond == that.bytesPerSecond &&
-                maxFlowCount == that.maxFlowCount &&
-                minFlowDurationMs == that.minFlowDurationMs &&
-                maxFlowDurationMs == that.maxFlowDurationMs &&
-                activeTimeoutMs == that.activeTimeoutMs;
+        final FlowGeneratorJson that = (FlowGeneratorJson) o;
+        return this.bytesPerSecond == that.bytesPerSecond &&
+                this.maxFlowCount == that.maxFlowCount &&
+                this.minFlowDurationMs == that.minFlowDurationMs &&
+                this.maxFlowDurationMs == that.maxFlowDurationMs &&
+                this.activeTimeoutMs == that.activeTimeoutMs;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(bytesPerSecond, maxFlowCount, minFlowDurationMs, maxFlowDurationMs, activeTimeoutMs);
+        return Objects.hash(this.bytesPerSecond, this.maxFlowCount, this.minFlowDurationMs, this.maxFlowDurationMs, this.activeTimeoutMs);
     }
 
     @Override
     public String toString() {
         return "FlowGeneratorJson{" +
-                "bytesPerSecond=" + bytesPerSecond +
-                ", maxFlowCount=" + maxFlowCount +
-                ", minFlowDurationMs=" + minFlowDurationMs +
-                ", maxFlowDurationMs=" + maxFlowDurationMs +
-                ", activeTimeoutMs=" + activeTimeoutMs +
+                "bytesPerSecond=" + this.bytesPerSecond +
+                ", maxFlowCount=" + this.maxFlowCount +
+                ", minFlowDurationMs=" + this.minFlowDurationMs +
+                ", maxFlowDurationMs=" + this.maxFlowDurationMs +
+                ", activeTimeoutMs=" + this.activeTimeoutMs +
                 '}';
     }
 }

@@ -49,7 +49,7 @@ public class ExporterJson {
 
     @XmlElement(name = "nodeId")
     public int getNodeId() {
-        return nodeId;
+        return this.nodeId;
     }
 
     public void setNodeId(final int nodeId) {
@@ -58,7 +58,7 @@ public class ExporterJson {
 
     @XmlElement(name = "foreignSource")
     public String getForeignSource() {
-        return foreignSource;
+        return this.foreignSource;
     }
 
     public void setForeignSource(final String foreignSource) {
@@ -67,7 +67,7 @@ public class ExporterJson {
 
     @XmlElement(name = "foreignId")
     public String getForeignId() {
-        return foreignId;
+        return this.foreignId;
     }
 
     public void setForeignId(final String foreignId) {
@@ -76,7 +76,7 @@ public class ExporterJson {
 
     @XmlElement(name = "location")
     public String getLocation() {
-        return location;
+        return this.location;
     }
 
     public void setLocation(final String location) {
@@ -85,7 +85,7 @@ public class ExporterJson {
 
     @XmlElement(name = "clockOffsetMs")
     public long getClockOffsetMs() {
-        return clockOffsetMs;
+        return this.clockOffsetMs;
     }
 
     public void setClockOffsetMs(final long clockOffsetMs) {
@@ -94,7 +94,7 @@ public class ExporterJson {
 
     @XmlElement(name = "flowGenerator")
     public FlowGeneratorJson getFlowGenerator() {
-        return flowGenerator;
+        return this.flowGenerator;
     }
 
     public void setFlowGenerator(final FlowGeneratorJson flowGenerator) {
@@ -103,19 +103,19 @@ public class ExporterJson {
 
     @XmlElement(name = "inputSnmp")
     public int getInputSnmp() {
-        return inputSnmp;
+        return this.inputSnmp;
     }
 
-    public void setInputSnmp(int inputSnmp) {
+    public void setInputSnmp(final int inputSnmp) {
         this.inputSnmp = inputSnmp;
     }
 
     @XmlElement(name = "outputSnmp")
     public int getOutputSnmp() {
-        return outputSnmp;
+        return this.outputSnmp;
     }
 
-    public void setOutputSnmp(int outputSnmp) {
+    public void setOutputSnmp(final int outputSnmp) {
         this.outputSnmp = outputSnmp;
     }
 
@@ -123,33 +123,33 @@ public class ExporterJson {
     public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ExporterJson that = (ExporterJson) o;
-        return nodeId == that.nodeId &&
-                clockOffsetMs == that.clockOffsetMs &&
-                Objects.equals(foreignSource, that.foreignSource) &&
-                Objects.equals(foreignId, that.foreignId) &&
-                Objects.equals(location, that.location) &&
-                Objects.equals(inputSnmp, that.inputSnmp) &&
-                Objects.equals(outputSnmp, that.outputSnmp) &&
-                Objects.equals(flowGenerator, that.flowGenerator);
+        final ExporterJson that = (ExporterJson) o;
+        return this.nodeId == that.nodeId &&
+                this.clockOffsetMs == that.clockOffsetMs &&
+                Objects.equals(this.foreignSource, that.foreignSource) &&
+                Objects.equals(this.foreignId, that.foreignId) &&
+                Objects.equals(this.location, that.location) &&
+                Objects.equals(this.inputSnmp, that.inputSnmp) &&
+                Objects.equals(this.outputSnmp, that.outputSnmp) &&
+                Objects.equals(this.flowGenerator, that.flowGenerator);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(nodeId, foreignSource, foreignId, location, clockOffsetMs, flowGenerator);
+        return Objects.hash(this.nodeId, this.foreignSource, this.foreignId, this.location, this.clockOffsetMs, this.flowGenerator);
     }
 
     @Override
     public String toString() {
         return "ExporterJson{" +
-                "nodeId=" + nodeId +
-                ", foreignSource='" + foreignSource + '\'' +
-                ", foreignId='" + foreignId + '\'' +
-                ", location='" + location + '\'' +
-                ", clockOffsetMs=" + clockOffsetMs +
-                ", flowGenerator=" + flowGenerator +
-                ", inputSnmp=" + inputSnmp +
-                ", outputSnmp=" + outputSnmp +
+                "nodeId=" + this.nodeId +
+                ", foreignSource='" + this.foreignSource + '\'' +
+                ", foreignId='" + this.foreignId + '\'' +
+                ", location='" + this.location + '\'' +
+                ", clockOffsetMs=" + this.clockOffsetMs +
+                ", flowGenerator=" + this.flowGenerator +
+                ", inputSnmp=" + this.inputSnmp +
+                ", outputSnmp=" + this.outputSnmp +
                 '}';
     }
 }

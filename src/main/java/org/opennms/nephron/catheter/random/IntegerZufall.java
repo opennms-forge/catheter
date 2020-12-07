@@ -41,7 +41,7 @@ public class IntegerZufall extends Zufall<Integer> {
     }
 
     @Override
-    protected Integer fromLong(final long aLong) {
-        return (int) aLong;
+    protected Integer fromLong(final long l) {
+        return (int) l;
     }
 }

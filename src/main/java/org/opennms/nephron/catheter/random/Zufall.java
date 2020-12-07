@@ -46,7 +46,7 @@ public abstract class Zufall<T> {
         if (this.range == 0) {
             return fromLong(this.start);
         }
-        final long l = this.start + Math.abs(random.nextLong()) % (this.range);
+        final long l = this.start + Math.abs(this.random.nextLong()) % (this.range);
         return this.fromLong(l);
     }
 
@@ -58,21 +58,21 @@ public abstract class Zufall<T> {
     public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Zufall<?> zufall = (Zufall<?>) o;
-        return start == zufall.start &&
-                range == zufall.range;
+        final Zufall<?> zufall = (Zufall<?>) o;
+        return this.start == zufall.start &&
+                this.range == zufall.range;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(start, range);
+        return Objects.hash(this.start, this.range);
     }
 
     @Override
     public String toString() {
         return "Zufall{" +
-                "start=" + start +
-                ", range=" + range +
+                "start=" + this.start +
+                ", range=" + this.range +
                 '}';
     }
 }

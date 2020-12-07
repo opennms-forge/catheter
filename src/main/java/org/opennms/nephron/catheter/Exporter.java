@@ -275,7 +275,7 @@ public class Exporter {
         }
 
         public Exporter build(final Instant now, final Random random) {
-            return new Exporter(this, now.plus(this.clockOffset), random);
+            return new Exporter(this, now, random);
         }
     }
 

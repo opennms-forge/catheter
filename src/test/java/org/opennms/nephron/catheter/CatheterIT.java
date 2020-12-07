@@ -261,7 +261,7 @@ public class CatheterIT {
             LOG.debug("First: " + first + " Last: " + last);
 
             assertTrue(first.equals(delta));
-            assertTrue(first.isBefore(last));
+            assertTrue(!first.isAfter(last));
             assertTrue(first.isAfter(now));
             assertTrue(last.isAfter(now));
             assertTrue(last.isBefore(future));
@@ -526,7 +526,7 @@ public class CatheterIT {
         long bytesReceived = 0;
 
         ConsumerRecords<String, FlowDocument> records;
-        while (!(records = kafkaConsumer.poll(1000)).isEmpty()) {
+        while (!(records = kafkaConsumer.poll(Duration.ofMillis(10000))).isEmpty()) {
             flowsReceived += records.count();
 
             for (final ConsumerRecord<String, FlowDocument> record : records) {

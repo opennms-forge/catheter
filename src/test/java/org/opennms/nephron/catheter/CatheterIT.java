@@ -474,7 +474,7 @@ public class CatheterIT {
 
     @Test
     public void testRealtimeWithClockSkew() {
-        runSimulation(createSimulation(true, true, null), Duration.ofSeconds(5));
+        runSimulation(createSimulation(true, true, 123456L), Duration.ofSeconds(5));
     }
 
     @Test
@@ -484,7 +484,7 @@ public class CatheterIT {
 
     @Test
     public void testNonRealtimeWithClockSkew() {
-        runSimulation(createSimulation(false, true, null), Duration.ofSeconds(5));
+        runSimulation(createSimulation(false, true, 123456L), Duration.ofSeconds(5));
     }
 
     public void runSimulation(final Simulation simulation, final Duration duration) {
@@ -522,27 +522,27 @@ public class CatheterIT {
 
         final KafkaConsumer<String, FlowDocument> kafkaConsumer = createConsumer();
 
-        final AtomicLong flowsReceived = new AtomicLong();
-        final AtomicLong bytesReceived = new AtomicLong();
+        long flowsReceived = 0;
+        long bytesReceived = 0;
 
-        await().pollDelay(Duration.ofSeconds(1)).atMost(Duration.ofMinutes(1)).until(() -> {
-            final ConsumerRecords<String, FlowDocument> records = kafkaConsumer.poll(1000);
-            flowsReceived.addAndGet(records.count());
+        ConsumerRecords<String, FlowDocument> records;
+        while (!(records = kafkaConsumer.poll(1000)).isEmpty()) {
+            flowsReceived += records.count();
 
             for (final ConsumerRecord<String, FlowDocument> record : records) {
-                bytesReceived.addAndGet(record.value().getNumBytes().getValue());
+                bytesReceived += record.value().getNumBytes().getValue();
             }
+        }
 
-            return flowsReceived.get() >= simulation.getFlowsSent();
-        });
+        assertThat(flowsReceived, is(simulation.getFlowsSent()));
 
-        final long rateReceived = (long) ((double) bytesReceived.get() / (double) simulation.getElapsedTime().toMillis() * 1000.0);
+        final long rateReceived = (long) ((double) bytesReceived / (double) simulation.getElapsedTime().toMillis() * 1000.0);
 
         LOG.debug("Kafka received {} flows", flowsReceived);
         LOG.debug("Kafka received {} bytes in total", bytesReceived);
         LOG.debug("Kafka rate is {} byte/sec", rateReceived);
 
-        assertThat(bytesReceived.get(), is(simulation.getBytesSent()));
+        assertThat(bytesReceived, is(simulation.getBytesSent()));
         assertThat(rateReceived, is(1000000L));
 
         kafkaConsumer.close();

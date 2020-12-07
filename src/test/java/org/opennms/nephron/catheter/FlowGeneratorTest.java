@@ -19,7 +19,7 @@ public class FlowGeneratorTest {
     private final static long TICK_MS = 250;
 
     @Test
-    public void moreflowTest() {
+    public void moreFlowTest() {
         generatorTestLoop(2);
         generatorTestLoop(3);
         generatorTestLoop(4);

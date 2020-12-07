@@ -202,17 +202,17 @@ public class Simulation {
 
             if (maxIterations > 0) {
                 maxIterations--;
-                if (maxIterations==0) {
+                if (maxIterations == 0) {
                     running.set(false);
                 }
             }
 
             if (realtime) {
-                final long timeToSleep = now.plus(tickMs).toEpochMilli() - Instant.now().toEpochMilli();
-                if (timeToSleep > 0) {
+                final Duration timeToSleep = Duration.between(Instant.now(), now);
+                if (!timeToSleep.isNegative()) {
                     try {
-                        LOG.trace("Sleeping for {} ms...", timeToSleep);
-                        Thread.sleep(timeToSleep);
+                        LOG.trace("Sleeping for {} ...", timeToSleep);
+                        Thread.sleep(timeToSleep.toMillis());
                     } catch (InterruptedException e) {
                         LOG.warn("Simulation: exception while Thread.sleep()", e);
                     }

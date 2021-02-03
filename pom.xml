@@ -67,11 +67,6 @@
         </dependency>
         <dependency>
             <groupId>org.opennms.nephron</groupId>
-            <artifactId>nephron-main</artifactId>
-            <version>LATEST</version>
-        </dependency>
-        <dependency>
-            <groupId>org.opennms.nephron</groupId>
             <artifactId>nephron-proto</artifactId>
             <version>LATEST</version>
         </dependency>

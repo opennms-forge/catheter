@@ -56,40 +56,41 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.eclipse.persistence.jaxb.MarshallerProperties;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.opennms.nephron.NephronOptions;
 import org.opennms.nephron.catheter.json.ExporterJson;
 import org.opennms.nephron.catheter.json.FlowGeneratorJson;
 import org.opennms.nephron.catheter.json.SimulationJson;
-import org.opennms.nephron.coders.KafkaInputFlowDeserializer;
 import org.opennms.netmgt.flows.persistence.model.FlowDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.KafkaContainer;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 public class CatheterIT {
     private static final Logger LOG = LoggerFactory.getLogger(CatheterIT.class);
+    public static final String FLOW_TOPIC = "flows";
 
     @Rule
     public KafkaContainer kafka = new KafkaContainer();
 
     @Before
     public void before() {
-        createTopics(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC);
+            createTopics(FLOW_TOPIC);
     }
 
     @Test
     public void testMainMethod() throws Exception {
         final SimulationJson simulationJson = new SimulationJson();
         simulationJson.setBootstrapServers(kafka.getBootstrapServers());
-        simulationJson.setFlowTopic(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC);
+        simulationJson.setFlowTopic(FLOW_TOPIC);
         simulationJson.setRealtime(true);
         simulationJson.setStartTime(Instant.now());
         simulationJson.setTickMs(250);
@@ -137,7 +138,7 @@ public class CatheterIT {
 
         final Simulation simulation = Simulation.builder()
                 .withBootstrapServers(kafka.getBootstrapServers())
-                .withFlowTopic(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC)
+                .withFlowTopic(FLOW_TOPIC)
                 .withRealtime(false)
                 .withStartTime(now)
                 .withTickMs(Duration.ofMillis(50))
@@ -205,7 +206,7 @@ public class CatheterIT {
 
         final Simulation simulation = Simulation.builder()
                 .withBootstrapServers(kafka.getBootstrapServers())
-                .withFlowTopic(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC)
+                .withFlowTopic(FLOW_TOPIC)
                 .withRealtime(true)
                 .withStartTime(now)
                 .withTickMs(Duration.ofMillis(50))
@@ -322,7 +323,7 @@ public class CatheterIT {
 
         final Simulation simulation = Simulation.builder()
                 .withBootstrapServers(kafka.getBootstrapServers())
-                .withFlowTopic(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC)
+                .withFlowTopic(FLOW_TOPIC)
                 .withRealtime(false)
                 .withStartTime(now)
                 .withTickMs(Duration.ofMillis(50))
@@ -432,12 +433,12 @@ public class CatheterIT {
 
     public Simulation createSimulation(final boolean realtime, final boolean clockSkew, final Long seed) {
         final Simulation simulation = Simulation.builder()
-                .withBootstrapServers(kafka.getBootstrapServers())
-                .withFlowTopic(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC)
-                .withRealtime(realtime)
-                .withStartTime(realtime ? Instant.now() : Instant.ofEpochMilli(1_500_000_000_000L))
-                .withTickMs(Duration.ofMillis(250))
-                .withExporters(
+                                                .withBootstrapServers(kafka.getBootstrapServers())
+                                                .withFlowTopic(FLOW_TOPIC)
+                                                .withRealtime(realtime)
+                                                .withStartTime(realtime ? Instant.now() : Instant.ofEpochMilli(1_500_000_000_000L))
+                                                .withTickMs(Duration.ofMillis(250))
+                                                .withExporters(
                         Exporter.builder()
                                 .withNodeId(1)
                                 .withForeignSource("exporters")
@@ -461,8 +462,8 @@ public class CatheterIT {
                                         .withMinFlowDuration(Duration.ofSeconds(2))
                                         .withMaxFlowDuration(Duration.ofSeconds(15)))
                 )
-                .withSeed(seed != null ? seed : System.currentTimeMillis())
-                .build();
+                                                .withSeed(seed != null ? seed : System.currentTimeMillis())
+                                                .build();
 
         return simulation;
     }
@@ -488,7 +489,7 @@ public class CatheterIT {
     }
 
     public void runSimulation(final Simulation simulation, final Duration duration) {
-        createTopics(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC);
+        createTopics(FLOW_TOPIC);
 
         simulation.start();
 
@@ -568,7 +569,18 @@ public class CatheterIT {
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaInputFlowDeserializer.class);
         final KafkaConsumer<String, FlowDocument> kafkaConsumer = new KafkaConsumer<>(consumerProps);
-        kafkaConsumer.subscribe(Collections.singletonList(NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC));
+        kafkaConsumer.subscribe(Collections.singletonList(FLOW_TOPIC));
         return kafkaConsumer;
+    }
+
+    public static class KafkaInputFlowDeserializer implements Deserializer<FlowDocument> {
+        @Override
+        public FlowDocument deserialize(String topic, byte[] data) {
+            try {
+                return FlowDocument.parseFrom(data);
+            } catch (InvalidProtocolBufferException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }

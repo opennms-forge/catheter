@@ -57,7 +57,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.persistence.jaxb.MarshallerProperties;
-import org.opennms.nephron.NephronOptions;
 import org.opennms.nephron.catheter.json.ExporterJson;
 import org.opennms.nephron.catheter.json.SimulationJson;
 import org.opennms.netmgt.flows.persistence.model.FlowDocument;
@@ -273,7 +272,7 @@ public class Simulation {
     }
 
     public static class Builder {
-        public String flowTopic = NephronOptions.DEFAULT_FLOW_SOURCE_TOPIC;
+        public String flowTopic;
         public long seed = new Random().nextLong();
         private String bootstrapServers;
         private Duration tickMs = Duration.ofMillis(250);

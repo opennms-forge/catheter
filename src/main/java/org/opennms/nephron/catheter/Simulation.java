@@ -28,45 +28,26 @@
 
 package org.opennms.nephron.catheter;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.StringReader;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
-import javax.xml.transform.Source;
-import javax.xml.transform.stream.StreamSource;
-
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.ByteArraySerializer;
-import org.apache.kafka.common.serialization.StringSerializer;
-import org.eclipse.persistence.jaxb.MarshallerProperties;
-import org.opennms.nephron.catheter.json.ExporterJson;
-import org.opennms.nephron.catheter.json.SimulationJson;
-import org.opennms.netmgt.flows.persistence.model.FlowDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Simulation {
     private static final Logger LOG = LoggerFactory.getLogger(Simulation.class);
-    private final String bootstrapServers;
-    private final String flowTopic;
+
+    private final BiConsumer<Exporter, FlowReport> handler;
     private final Duration tickMs;
     private final boolean realtime;
     private final Instant startTime;
@@ -80,58 +61,12 @@ public class Simulation {
     private long maxIterations = 0;
 
     private Simulation(final Builder builder) {
-        this.bootstrapServers = Objects.requireNonNull(builder.bootstrapServers);
-        this.flowTopic = Objects.requireNonNull(builder.flowTopic);
+        this.handler = builder.handler;
         this.tickMs = Objects.requireNonNull(builder.tickMs);
         this.realtime = builder.realtime;
         this.startTime = Instant.ofEpochMilli(builder.startTime != null ? builder.startTime.toEpochMilli() : Instant.now().toEpochMilli() / builder.tickMs.toMillis() * builder.tickMs.toMillis());
         this.random.setSeed(builder.seed);
         this.exporters = builder.exporters.stream().map(e -> e.build(this.startTime, random)).collect(Collectors.toList());
-    }
-
-    public static Simulation fromFile(final File file) throws JAXBException, FileNotFoundException {
-        return fromSource(new StreamSource(new FileReader(file)));
-
-    }
-
-    public static Simulation fromJson(final String json) throws JAXBException {
-        return fromSource(new StreamSource(new StringReader(json)));
-    }
-
-    private static Simulation fromSource(final Source source) throws JAXBException {
-        final Unmarshaller unmarshaller = JAXBContext.newInstance(SimulationJson.class).createUnmarshaller();
-        unmarshaller.setProperty(MarshallerProperties.MEDIA_TYPE, "application/json");
-        final SimulationJson simulationJson = unmarshaller.unmarshal(source, SimulationJson.class).getValue();
-
-        final List<Exporter.Builder> exporterBuilders = new ArrayList<>();
-
-        for(final ExporterJson exporterJson : simulationJson.getExporters()) {
-            final FlowGenerator.Builder flowGeneratorBuilder = FlowGenerator.builder()
-                    .withMaxFlowCount(exporterJson.getFlowGenerator().getMaxFlowCount())
-                    .withMinFlowDuration(Duration.ofMillis(exporterJson.getFlowGenerator().getMinFlowDurationMs()))
-                    .withMaxFlowDuration(Duration.ofMillis(exporterJson.getFlowGenerator().getMaxFlowDurationMs()))
-                    .withActiveTimeout(Duration.ofMillis(exporterJson.getFlowGenerator().getActiveTimeoutMs()))
-                    .withBytesPerSecond(exporterJson.getFlowGenerator().getBytesPerSecond());
-
-            exporterBuilders.add(Exporter.builder()
-                                    .withForeignId(exporterJson.getForeignId())
-                                    .withForeignSource(exporterJson.getForeignSource())
-                                    .withNodeId(exporterJson.getNodeId())
-                                    .withLocation(exporterJson.getLocation())
-                                    .withInputSnmp(exporterJson.getInputSnmp())
-                                    .withOutputSnmp(exporterJson.getOutputSnmp())
-                                    .withGenerator(flowGeneratorBuilder)
-                                    .withClockOffset(Duration.ofMillis(exporterJson.getClockOffsetMs())));
-        }
-
-        return Simulation.builder()
-            .withStartTime(simulationJson.getStartTime())
-            .withSeed(simulationJson.getSeed())
-            .withBootstrapServers(simulationJson.getBootstrapServers())
-            .withTickMs(Duration.ofMillis(simulationJson.getTickMs()))
-            .withFlowTopic(simulationJson.getFlowTopic())
-            .withRealtime(simulationJson.getRealtime())
-            .withExporters(exporterBuilders).build();
     }
 
     @Override
@@ -140,8 +75,6 @@ public class Simulation {
         if (o == null || getClass() != o.getClass()) return false;
         final Simulation that = (Simulation) o;
         return this.realtime == that.realtime &&
-                Objects.equals(this.bootstrapServers, that.bootstrapServers) &&
-                Objects.equals(this.flowTopic, that.flowTopic) &&
                 Objects.equals(this.tickMs, that.tickMs) &&
                 Objects.equals(this.startTime, that.startTime) &&
                 Objects.equals(this.exporters, that.exporters);
@@ -150,8 +83,6 @@ public class Simulation {
     @Override
     public String toString() {
         return "Simulation{" +
-                "bootstrapServers='" + this.bootstrapServers + '\'' +
-                ", flowTopic='" + this.flowTopic + '\'' +
                 ", tickMs=" + this.tickMs +
                 ", realtime=" + this.realtime +
                 ", startTime=" + this.startTime +
@@ -161,11 +92,11 @@ public class Simulation {
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.bootstrapServers, this.flowTopic, this.tickMs, this.realtime, this.startTime, this.exporters, this.thread, this.running, this.elapsedTime, this.flowsSent, this.bytesSent, this.random, this.maxIterations);
+        return Objects.hash(this.tickMs, this.realtime, this.startTime, this.exporters, this.thread, this.running, this.elapsedTime, this.flowsSent, this.bytesSent, this.random, this.maxIterations);
     }
 
-    public static Builder builder() {
-        return new Builder();
+    public static Builder builder(final BiConsumer<Exporter, FlowReport> handler) {
+        return new Builder(handler);
     }
 
     public void start() {
@@ -185,12 +116,6 @@ public class Simulation {
         this.elapsedTime = Duration.ZERO;
         this.flowsSent = 0;
         this.bytesSent = 0;
-
-        final Map<String, Object> producerProps = new HashMap<>();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
-        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class);
-        KafkaProducer<String, byte[]> kafkaProducer = new KafkaProducer<>(producerProps);
 
         Instant now = this.startTime;
 
@@ -219,31 +144,23 @@ public class Simulation {
 
 
             for (final Exporter exporter : this.exporters) {
-                sendFlowDocuments(kafkaProducer, exporter.tick(now));
+                dispatch(exporter, exporter.tick(now));
             }
         }
 
         LOG.debug("Simulation: shutting down {} exporters", this.exporters.size());
 
         for (final Exporter exporter : this.exporters) {
-            sendFlowDocuments(kafkaProducer, exporter.shutdown(now));
+            dispatch(exporter, exporter.shutdown(now));
         }
-
-        kafkaProducer.close();
     }
 
-    private void sendFlowDocuments(final KafkaProducer<String, byte[]> kafkaProducer, final Collection<FlowDocument> flowDocuments) {
-        this.flowsSent += flowDocuments.size();
-        for (final FlowDocument flowDocument : flowDocuments) {
-            this.bytesSent += flowDocument.getNumBytes().getValue();
-            kafkaProducer.send(new ProducerRecord<>(this.flowTopic, flowDocument.toByteArray()), (metadata, exception) -> {
-                if (exception != null) {
-                    LOG.warn("Simulation: error sending flow document to Kafka topic", exception);
-                }
-            });
-        }
-        if (!flowDocuments.isEmpty()) {
-            LOG.debug("Simulation: sent {} flow documents to Kafka topic '{}'", flowDocuments.size(), this.flowTopic);
+    private void dispatch(final Exporter exporter, final Collection<FlowReport> flowReports) {
+        this.flowsSent += flowReports.size();
+        for (final FlowReport flowReport : flowReports) {
+            this.bytesSent += flowReport.getBytes();
+
+            this.handler.accept(exporter, flowReport);
         }
     }
 
@@ -271,25 +188,30 @@ public class Simulation {
         return this.bytesSent;
     }
 
+    public Random getRandom() {
+        return this.random;
+    }
+
+    public BiConsumer<Exporter, FlowReport> getHandler() {
+        return this.handler;
+    }
+
     public static class Builder {
-        public String flowTopic;
         public long seed = new Random().nextLong();
-        private String bootstrapServers;
+
+        private BiConsumer<Exporter, FlowReport> handler;
+
         private Duration tickMs = Duration.ofMillis(250);
         private boolean realtime;
         private Instant startTime;
         private final List<Exporter.Builder> exporters = new ArrayList<>();
 
-        private Builder() {
+        private Builder(final BiConsumer<Exporter, FlowReport> handler) {
+            this.handler = Objects.requireNonNull(handler);
         }
 
-        public Builder withBootstrapServers(final String bootstrapServers) {
-            this.bootstrapServers = Objects.requireNonNull(bootstrapServers);
-            return this;
-        }
-
-        public Builder withFlowTopic(final String flowTopic) {
-            this.flowTopic = flowTopic;
+        public Builder withHandler(final BiConsumer<Exporter, FlowReport> handler) {
+            this.handler = Objects.requireNonNull(handler);
             return this;
         }
 

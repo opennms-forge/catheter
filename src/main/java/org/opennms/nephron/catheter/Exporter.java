@@ -28,32 +28,13 @@
 
 package org.opennms.nephron.catheter;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.Random;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import org.opennms.netmgt.flows.persistence.model.FlowDocument;
-import org.opennms.netmgt.flows.persistence.model.Locality;
-import org.opennms.netmgt.flows.persistence.model.NodeInfo;
-
-import com.google.common.net.InetAddresses;
-import com.google.protobuf.UInt32Value;
-import com.google.protobuf.UInt64Value;
 
 public class Exporter {
-    private final List<Integer> protocols;
-    private final List<String> applications;
-    private final List<String> hosts;
-    private final List<AddrHost> addresses;
     private final int nodeId;
     private final String foreignSource;
     private final String foreignId;
@@ -76,10 +57,6 @@ public class Exporter {
         this.random = random;
         this.generator = builder.generator.build(now, random);
 
-        this.protocols = Arrays.asList(6, 17);
-        this.applications = generate(200, generateString(15));
-        this.hosts = generate(5, generateString(10));
-        this.addresses = generate(100, () -> new AddrHost(generateInetAddr().get(), generateString(10).get()));
         this.inputSnmp = builder.inputSnmp;
         this.outputSnmp = builder.outputSnmp;
     }
@@ -88,53 +65,12 @@ public class Exporter {
         return new Builder();
     }
 
-    public Collection<FlowDocument> tick(final Instant now) {
-        return this.generator.tick(now).stream().map(this::createFlowDocument).collect(Collectors.toList());
+    public Collection<FlowReport> tick(final Instant now) {
+        return this.generator.tick(now);
     }
 
-    public Collection<FlowDocument> shutdown(final Instant now) {
-        return this.generator.shutdown(now).stream().map(this::createFlowDocument).collect(Collectors.toList());
-    }
-
-    private FlowDocument createFlowDocument(final FlowReport report) {
-        final int protocol = choose(this.protocols);
-        final String application = choose(this.applications);
-
-        final AddrHost srcAddr = choose(this.addresses);
-        final AddrHost dstAddr = choose(this.addresses);
-
-        final InetAddress[] convo = InetAddresses.coerceToInteger(srcAddr.address) < InetAddresses.coerceToInteger(dstAddr.address)
-                ? new InetAddress[]{srcAddr.address, dstAddr.address}
-                : new InetAddress[]{dstAddr.address, srcAddr.address};
-
-        final String convoKey = "[\"" + this.location + "\",\"" + protocol + ",\"" + InetAddresses.toAddrString(convo[0]) + "\",\"" + InetAddresses.toAddrString(convo[1]) + "\",\"" + application + "\"]";
-
-        final FlowDocument.Builder flow = FlowDocument.newBuilder();
-        flow.setApplication(application);
-        flow.setHost(choose(this.hosts));
-        flow.setLocation(this.location);
-        flow.setDstLocality(Locality.PUBLIC);
-        flow.setSrcLocality(Locality.PUBLIC);
-        flow.setFlowLocality(Locality.PUBLIC);
-        flow.setSrcAddress(InetAddresses.toAddrString(srcAddr.address));
-        flow.setDstAddress(InetAddresses.toAddrString(dstAddr.address));
-        flow.setSrcHostname(srcAddr.hostname);
-        flow.setDstHostname(dstAddr.hostname);
-        flow.setFirstSwitched(UInt64Value.of(report.getStart().plus(this.clockOffset).toEpochMilli()));
-        flow.setDeltaSwitched(UInt64Value.of(report.getStart().plus(this.clockOffset).toEpochMilli()));
-        flow.setLastSwitched(UInt64Value.of(report.getEnd().plus(this.clockOffset).toEpochMilli()));
-        flow.setNumBytes(UInt64Value.of(report.getBytes()));
-        flow.setConvoKey(convoKey);
-        flow.setInputSnmpIfindex(UInt32Value.of(this.inputSnmp));
-        flow.setOutputSnmpIfindex(UInt32Value.of(this.outputSnmp));
-
-        final NodeInfo.Builder exporter = NodeInfo.newBuilder();
-        exporter.setNodeId(this.nodeId);
-        exporter.setForeignSource(this.foreignSource);
-        exporter.setForeginId(this.foreignId);
-        flow.setExporterNode(exporter);
-
-        return flow.build();
+    public Collection<FlowReport> shutdown(final Instant now) {
+        return this.generator.shutdown(now);
     }
 
     @Override
@@ -168,28 +104,35 @@ public class Exporter {
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.protocols, this.applications, this.hosts, this.addresses, this.nodeId, this.foreignSource, this.foreignId, this.location, this.generator, this.clockOffset, this.random, this.inputSnmp, this.outputSnmp);
+        return Objects.hash(this.nodeId, this.foreignSource, this.foreignId, this.location, this.generator, this.clockOffset, this.random, this.inputSnmp, this.outputSnmp);
     }
 
-    private Supplier<String> generateString(final int length) {
-        return () -> random.ints(97, 123)
-                .limit(length)
-                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
-                .toString();
+    public int getNodeId() {
+        return this.nodeId;
     }
 
-    private <T> List<T> generate(final int count, final Supplier<T> f) {
-        return IntStream.range(0, count)
-                .mapToObj(i -> f.get())
-                .collect(Collectors.toList());
+    public String getForeignSource() {
+        return this.foreignSource;
     }
 
-    private Supplier<Inet4Address> generateInetAddr() {
-        return () -> InetAddresses.fromInteger(random.nextInt());
+    public int getInputSnmp() {
+        return this.inputSnmp;
     }
 
-    private <T> T choose(final List<T> options) {
-        return options.get(random.nextInt(options.size()));
+    public Duration getClockOffset() {
+        return this.clockOffset;
+    }
+
+    public int getOutputSnmp() {
+        return this.outputSnmp;
+    }
+
+    public String getForeignId() {
+        return this.foreignId;
+    }
+
+    public String getLocation() {
+        return this.location;
     }
 
     public static class Builder {
@@ -272,16 +215,6 @@ public class Exporter {
 
         public Exporter build(final Instant now, final Random random) {
             return new Exporter(this, now, random);
-        }
-    }
-
-    private static class AddrHost {
-        public final InetAddress address;
-        public final String hostname;
-
-        private AddrHost(final InetAddress address, final String hostname) {
-            this.address = Objects.requireNonNull(address);
-            this.hostname = Objects.requireNonNull(hostname);
         }
     }
 }

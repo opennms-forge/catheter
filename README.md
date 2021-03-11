@@ -24,9 +24,7 @@ So, the byte rate can be combined of more or less flows. The following example s
 This will result in a pretty random stream of flows that total up to the requested byte rate. The following example code will create a realtime simulation with three exporters. The third exporter has an skewed clock with a five minutes offset:
 
 
-    final Simulation simulation = Simulation.builder()
-                .withBootstrapServers(KAFKA_BOOTSTRAP_SERVERS)
-                .withFlowTopic(KAFKA_FLOW_TOPIC)
+    final Simulation simulation = Simulation.builder(handler)
                 .withTickMs(Duration.ofMillis(100))
                 .withRealtime(true)
                 .withExporters(Exporter.builder()

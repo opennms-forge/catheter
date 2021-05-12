@@ -7,6 +7,47 @@
     <groupId>org.opennms.catheter</groupId>
     <artifactId>catheter</artifactId>
     <version>1.0.0</version>
+
+    <name>Nephron :: Catheter</name>
+    <url>https://github.com/OpenNMS/catheter</url>
+    <description>Test Utilities for OpenNMS Nephron</description>
+
+    <licenses>
+        <license>
+            <name>GNU Affero General Public License</name>
+            <url>http://www.gnu.org/licenses/agpl.html</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://github.com/OpenNMS/catheter</url>
+        <connection>scm:git:git@github.com:OpenNMS/catheter.git</connection>
+        <tag>HEAD</tag>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>christian</id>
+            <name>Christian Pape</name>
+            <email>Christian.Pape@informatik.hs-fulda.de</email>
+        </developer>
+        <developer>
+            <id>fooker</id>
+            <name>Dustin Frisch</name>
+            <email>fooker@lab.sh</email>
+        </developer>
+        <developer>
+            <id>stefan</id>
+            <name>Stefan Wachter</name>
+            <email>stefan.wachter@gmx.de</email>
+        </developer>
+        <developer>
+            <id>ranger</id>
+            <name>Benjamin Reed</name>
+            <email>ranger@opennms.org</email>
+        </developer>
+    </developers>
+
     <build>
         <plugins>
             <plugin>
@@ -38,6 +79,28 @@
                         <goals>
                             <goal>single</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadoc</id>
+                        <goals><goal>jar</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals><goal>jar</goal></goals>
                     </execution>
                 </executions>
             </plugin>
@@ -127,4 +190,36 @@
         </repository>
     </distributionManagement>
 
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.6</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>disable-java8-doclint</id>
+            <activation>
+                <jdk>[1.8,)</jdk>
+            </activation>
+            <properties>
+                <additionalparam>-Xdoclint:none</additionalparam>
+            </properties>
+        </profile>
+    </profiles>
 </project>

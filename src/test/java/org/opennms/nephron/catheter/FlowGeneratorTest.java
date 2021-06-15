@@ -108,59 +108,20 @@ public class FlowGeneratorTest {
                 .withBytesPerSecond(BPS)
                 .build(PIT, random);
 
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(500))), is(empty()));
+        var reportedBytes = 0l;
+        var tick = PIT;
+        var tickPeriod = Duration.ofMillis(500);
 
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(1000))), is(empty()));
+        // test that the rate of reportedBytes + notYetReportedBytes is equal to the expected BPS rate
+        for (int i = 0; i < 20; i++) {
+            tick = tick.plus(tickPeriod);
+            var reported = flowGenerator.tick(tick);
+            reportedBytes += reported.stream().mapToLong(fr -> fr.getBytes()).sum();
+            var notYetReportedBytes = flowGenerator.notYetReportedBytes();
+            var currentRate = (reportedBytes + notYetReportedBytes) * 1000 / Duration.between(PIT, tick).toMillis();
+            assertThat(currentRate, is(BPS));
+        }
 
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(1500))), is(empty()));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(2000))), is(empty()));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(2500))), containsInAnyOrder(
-                new FlowReport(PIT.plus(Duration.ofMillis(500)), PIT.plus(Duration.ofMillis(2500)), 1000000L),
-                new FlowReport(PIT.plus(Duration.ofMillis(500)), PIT.plus(Duration.ofMillis(2500)), 1000000L)
-        ));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(3000))), is(empty()));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(3500))), is(empty()));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(4000))), is(empty()));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(4500))), containsInAnyOrder(
-                new FlowReport(PIT.plus(Duration.ofMillis(2500)), PIT.plus(Duration.ofMillis(4500)), 1000000L),
-                new FlowReport(PIT.plus(Duration.ofMillis(2500)), PIT.plus(Duration.ofMillis(4500)), 1000000L)
-        ));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(5000))), is(empty()));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(5500))), is(empty()));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(6000))), is(empty()));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(6500))), containsInAnyOrder(
-                new FlowReport(PIT.plus(Duration.ofMillis(4500)), PIT.plus(Duration.ofMillis(6500)), 1000000L),
-                new FlowReport(PIT.plus(Duration.ofMillis(4500)), PIT.plus(Duration.ofMillis(6500)), 1000000L)
-        ));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(7000))), is(empty()));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(7500))), containsInAnyOrder(
-                new FlowReport(PIT.plus(Duration.ofMillis(6500)), PIT.plus(Duration.ofMillis(7500)), 500000L)
-        ));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(8000))), is(empty()));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(8500))), containsInAnyOrder(
-                new FlowReport(PIT.plus(Duration.ofMillis(6500)), PIT.plus(Duration.ofMillis(8500)), 1000000L)
-        ));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(9000))), is(empty()));
-
-        assertThat(flowGenerator.tick(PIT.plus(Duration.ofMillis(9500))), containsInAnyOrder(
-                new FlowReport(PIT.plus(Duration.ofMillis(7500)), PIT.plus(Duration.ofMillis(9500)), 333332L),
-                new FlowReport(PIT.plus(Duration.ofMillis(7500)), PIT.plus(Duration.ofMillis(9500)), 333332L),
-                new FlowReport(PIT.plus(Duration.ofMillis(7500)), PIT.plus(Duration.ofMillis(9500)), 333336L)
-        ));
     }
+
 }

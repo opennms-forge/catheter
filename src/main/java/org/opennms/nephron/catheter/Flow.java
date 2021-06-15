@@ -32,6 +32,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
 public class Flow {
@@ -77,6 +78,9 @@ public class Flow {
     public long getBytesPerSecond() {
         return this.bytesPerSecond;
     }
+
+    @VisibleForTesting
+    public long getBytes() { return bytes; }
 
     @Override
     public boolean equals(final Object o) {

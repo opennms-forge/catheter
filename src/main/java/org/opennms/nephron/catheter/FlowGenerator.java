@@ -40,6 +40,7 @@ import org.opennms.nephron.catheter.random.DurationZufall;
 import org.opennms.nephron.catheter.random.IntegerZufall;
 import org.opennms.nephron.catheter.random.Zufall;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 
 public class FlowGenerator {
@@ -117,6 +118,11 @@ public class FlowGenerator {
         this.lastTick = now;
 
         return reports;
+    }
+
+    @VisibleForTesting
+    public long notYetReportedBytes() {
+        return ongoingFlows.stream().mapToLong(f -> f.getBytes()).sum();
     }
 
     private void spawnFlows(Instant now) {

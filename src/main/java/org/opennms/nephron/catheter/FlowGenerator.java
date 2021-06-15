@@ -61,16 +61,38 @@ public class FlowGenerator {
 
         this.lastTick = now;
         this.random = random;
+        // span flows from the very beginning
+        // -> ensures that the required traffic volume is met from the very beginning
+        spawnFlows(now);
     }
 
     public static Builder builder() {
         return new Builder();
     }
 
+    /**
+     * Called for every tick instant.
+     *
+     * The first tick instant is start + tickMs.
+     */
     public Collection<FlowReport> tick(final Instant now) {
         final Duration tick = Duration.ofMillis(now.toEpochMilli() - lastTick.toEpochMilli());
         final List<FlowReport> reports = Lists.newArrayList();
 
+        // all ongoing flows get their share of the total number of bytes to transmit
+        double tickDurationInSeconds = ((double) tick.toMillis()) / 1000.0;
+        double bytesToTransmit = bytesPerSecond * tickDurationInSeconds;
+
+        for (int i = ongoingFlows.size() - 1; i >= 0; i--) {
+            Flow flow = ongoingFlows.get(i);
+            long transmit = Math.round(i == 0 ? bytesToTransmit : tickDurationInSeconds * flow.getBytesPerSecond());
+            flow.transmit(transmit);
+            bytesToTransmit -= transmit;
+        }
+
+        // some flows report results because they
+        // * reached their and or
+        // * they hit the active timeout
         for (final Iterator<Flow> it = this.ongoingFlows.iterator(); it.hasNext(); ) {
             final Flow flow = it.next();
 
@@ -81,6 +103,7 @@ public class FlowGenerator {
             if (duration.toMillis() > randomDuration.toMillis()) {
                 reports.add(flow.report(now));
                 it.remove();
+                continue;
             }
 
             // Check for flows with trigger active timeout
@@ -89,6 +112,14 @@ public class FlowGenerator {
             }
         }
 
+        spawnFlows(now);
+
+        this.lastTick = now;
+
+        return reports;
+    }
+
+    private void spawnFlows(Instant now) {
         // compute the missing bytesPerSecond due to ended flows
         long deltaBytesPerSecond = this.bytesPerSecond - this.ongoingFlows.stream().mapToLong(Flow::getBytesPerSecond).sum();
 
@@ -111,25 +142,14 @@ public class FlowGenerator {
                 this.ongoingFlows.add(flow);
             }
         }
-
-        // with floor() we will loose bytes and round() will add bytes, so we need an error variable
-        double error = 0.0;
-
-        double byteRate = ((double) tick.toMillis()) / 1000.0;
-
-        for (final Flow flow : this.ongoingFlows) {
-            // add error to computation
-            double rate = Math.floor(error + byteRate * (double) flow.getBytesPerSecond());
-            // set the error we have at this point
-            error = (error + byteRate * (double) flow.getBytesPerSecond()) - rate;
-            flow.transmit((long) rate);
-        }
-
-        this.lastTick = now;
-
-        return reports;
     }
 
+    /**
+     * Called for the last tick.
+     *
+     * The last tick happens if either the maximum number of simulation iterations did happen or if stop was called
+     * on the simulation.
+     */
     public Collection<FlowReport> shutdown(final Instant now) {
         // Generate reports for all ongoing flows
         final List<FlowReport> reports = Lists.newArrayList();

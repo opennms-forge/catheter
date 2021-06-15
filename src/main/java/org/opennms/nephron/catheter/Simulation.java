@@ -103,7 +103,7 @@ public class Simulation {
         start(0);
     }
 
-    void start(final long maxIterations) {
+    public void start(final long maxIterations) {
         this.maxIterations = maxIterations;
         if (!this.running.get()) {
             this.running.set(true);

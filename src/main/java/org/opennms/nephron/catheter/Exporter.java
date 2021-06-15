@@ -65,10 +65,21 @@ public class Exporter {
         return new Builder();
     }
 
+    /**
+     * Called for every tick instant.
+     *
+     * The first tick instant is start + tickMs.
+     */
     public Collection<FlowReport> tick(final Instant now) {
         return this.generator.tick(now);
     }
 
+    /**
+     * Called for the last tick.
+     *
+     * The last tick happens if either the maximum number of simulation iterations did happen or if stop was called
+     * on the simulation.
+     */
     public Collection<FlowReport> shutdown(final Instant now) {
         return this.generator.shutdown(now);
     }
